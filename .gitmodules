@@ -1,0 +1,6 @@
+[submodule "application/framework"]
+	path = application/framework
+	url = git@bitbucket.org:logbon72/ideo.git
+[submodule "application/library/framework"]
+	path = application/library/framework
+	url = git@bitbucket.org:logbon72/ideo.git

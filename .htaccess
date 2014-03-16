@@ -1,0 +1,34 @@
+RewriteEngine on
+Options +FollowSymlinks -Indexes
+SetEnv DEFAULT_CONFIG live
+#un-coment when there's need to put on maintenance mode.
+#RewriteRule ^(.*)$ maintenance.html [L]
+
+#RewriteRule ^(.*)$ maintenance.html [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . index.php [L]
+#ErrorDocument 404 ./error.php
+<files ~ "\.tpl$">
+order deny,allow
+allow from none
+deny from all
+</files>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/gif "access plus 5 months"
+  ExpiresByType image/jpeg "access plus 5 months"
+  ExpiresByType image/png "access plus 5 months"
+  ExpiresByType text/css "access plus 1 week"
+  ExpiresByType application/x-javascript "access plus 1 week"
+  ExpiresByType application/javascript "access plus 1 week"
+  ExpiresByType text/javascript "access plus 1 week"
+  ExpiresByType image/x-icon "access plus 5 months"
+</IfModule>
+
+SetOutputFilter DEFLATE
+#DeflateFilterNote ratio
+SetEnvIfNoCase Request_URI .(?:gif|jpe?g|png)$ no-gzip dont-vary
+SetEnvIfNoCase Request_URI .(?:exe|t?gz|zip|bz2|sit|rar|docx|doc|rtf)$ no-gzip dont-vary
+SetEnvIfNoCase Request_URI .pdf$ no-gzip dont-vary

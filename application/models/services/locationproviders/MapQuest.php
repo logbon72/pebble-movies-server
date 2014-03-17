@@ -30,7 +30,7 @@ class MapQuest extends LocationServiceProvider implements LocationDistanceCheckI
         throw new Exception("Unimplemented");
     }
 
-    public function getGeocode($address) {
+    public function addressLookup($address) {
         throw new Exception("Unimplemented");
     }
 

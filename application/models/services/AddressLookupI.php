@@ -15,7 +15,7 @@ namespace models\services;
  */
 interface AddressLookupI {
     /**
-     * @return \models\Geocode Description
+     * @return LookupResult
      */
-    public function getGeocode($address);
+    public function addressLookup($address);
 }

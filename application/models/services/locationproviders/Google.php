@@ -21,7 +21,7 @@ class Google extends \models\services\LocationServiceProvider implements \models
         $this->apiKey = \SystemConfig::getInstance()->google['api_key'];
     }
     
-    public function getGeocode($address) {
+    public function addressLookup($address) {
         throw new \Exception("Unimplemented");
     }
 

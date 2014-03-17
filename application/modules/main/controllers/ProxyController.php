@@ -22,7 +22,7 @@ class ProxyController extends \controllers\AppBaseController {
     protected $userDevice;
     protected $skipAuths = array('register');
     protected $requestId;
-    
+
     /**
      *
      * @var \models\entities\GeocodeCached
@@ -63,6 +63,21 @@ class ProxyController extends \controllers\AppBaseController {
         }
     }
 
+    protected function _initGeocode() {
+        $locationService = \models\services\LocationService::instance();
+        if ($this->_request->hasQueryParam('latlng')) {
+            $latLng = $this->_request->getQueryParam('latlng');
+            $this->geocode = $locationService->lookUp($latLng);
+        }
+        
+        if(!$this->geocode && ($this->_request->hasQueryParam('city') || $this->_request->hasQueryParam('country') || $this->_request->hasQueryParam('postalCode'))){
+            $countryIso = $this->_request->getQueryParam('country');
+            $city = $this->_request->getQueryParam('city');
+            $postalCode = $this->_request->getQueryParam('postalCode');
+            $this->geocode = $locationService->postalCodeLookup($postalCode, $countryIso, $city);
+        }
+    }
+
     public function doDefault() {
         $this->_forward('register');
     }
@@ -91,23 +106,23 @@ class ProxyController extends \controllers\AppBaseController {
             $this->response->setResult(array('device' => $this->userDevice->toArray(0)));
         }
     }
-    
+
     public function doTheatres() {
         
     }
-    
+
     public function doTheatreMovies() {
         
     }
-    
+
     public function doTheatreMovieShowtimes() {
         
     }
-    
+
     public function doMovies() {
         
     }
-    
+
     public function doMovieTheatres() {
         
     }

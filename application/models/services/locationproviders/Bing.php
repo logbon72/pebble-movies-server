@@ -51,7 +51,7 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
         //return 
     }
 
-    public function getGeocode($address) {
+    public function addressLookup($address) {
         $data = array(
             "query" => $address,
             'apiKey' => $this->apiKey,
@@ -62,9 +62,8 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
         if ($this->checkError($resultDecoded)) {
             return null;
         }
-        $resultProp = $resultDecoded['resourceSets'][0]['resources'][0];
-        $geocode = $resultProp['geocodePoints'][0]['coordinates'];
-        return $geocode ? new Geocode($geocode[0], $geocode[1]) : null;
+        
+        return $this->convertToLookupResult($resultDecoded);
     }
 
     public function lookUp($long, $lat) {
@@ -80,6 +79,15 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
             return null;
         }
 
+        return $this->convertToLookupResult($resultDecoded);
+    }
+
+    /**
+     * 
+     * @param type $resultDecoded
+     * @return \models\services\LookupResult
+     */
+    private function convertToLookupResult($resultDecoded) {
         $resultProp = $resultDecoded['resourceSets'][0]['resources'][0];
         $address = $resultProp['address'];
         $geocode = $resultProp['geocodePoints'][0]['coordinates'];

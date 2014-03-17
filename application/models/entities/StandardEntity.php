@@ -30,4 +30,12 @@ class StandardEntity extends \Entity{
         
         return self::$instances[$instanceKey];
     }
+    
+    /**
+     * 
+     * @return \EntityTable
+     */
+    public static function table() {
+        return static::manager()->getEntityTable();
+    }
 }

@@ -21,5 +21,6 @@ class Showtime extends StandardEntity {
         $this->setManyToOne('theatre', Theatre::manager())
                 ->setManyToOne('movie', Movie::manager());
     }
+   
 
 }

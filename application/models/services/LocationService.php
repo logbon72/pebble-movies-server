@@ -48,6 +48,7 @@ class LocationService extends \IdeoObject {
             throw new \InvalidArgumentException("There are no service providers defined.");
         }
 
+        \ComparableObjectSorter::sort($this->serviceProviderList, false, true);
         $this->geocodeCachedManager = \models\entities\GeocodeCached::manager();
     }
 

@@ -3,11 +3,12 @@
 namespace models\services;
 
 /**
- * Description of LookupError
- *
+ * Description of ServiceError
+ * 
+ * 
  * @author intelWorX
  */
-class LookupError extends \IdeoObject {
+class ServiceError extends \IdeoObject {
     
     protected $errorType = null;
     protected $errorMessage = null;

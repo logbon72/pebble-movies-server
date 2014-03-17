@@ -23,5 +23,9 @@ class Geocode extends \IdeoObject{
         $this->latitude = $longitude;
         $this->setSynthesizeFields(true);
     }
+
     
+    public function __toString() {
+        return $this->latitude . ','. $this->longitude;
+    }
 }

@@ -9,14 +9,13 @@
 namespace models\services;
 
 /**
- * Description of LocationDistanceCheckI
+ * Description of AddressLookupI
  *
  * @author intelWorX
  */
-
-
-interface LocationDistanceCheckI {
-    
-    //must return distance in metres, -1 if error occurs.
-    public function distanceLookup(\models\Geocode $source, \models\Geocode $destination);
+interface AddressLookupI {
+    /**
+     * @return \models\Geocode Description
+     */
+    public function getGeocode($address);
 }

@@ -1,23 +1,87 @@
 <?php
 
-/**
- * http://api.geonames.org/findNearbyJSON?lat=6.54839&lng=3.3841109&username=demo
- * {"geonames":[{"countryId":"2328926","adminCode1":"05","countryName":"Nigeria","fclName":"country, state, region,...","countryCode":"NG","lng":"3.3807","fcodeName":"second-order administrative division","distance":"1.07799","toponymName":"Shomolu","fcl":"A","name":"Shomolu","fcode":"ADM2","geonameId":7871280,"lat":"6.55752","adminName1":"Lagos","population":0}]}
- * 
- * http://api.geonames.org/findNearbyPostalCodesJSON?lat=47&lng=9&username=demo
- * {"postalCodes":[{"adminCode3":"1631","adminName2":"Glarus","adminName3":"Glarus Süd","adminCode2":"800","distance":"2.21233","adminCode1":"GL","postalCode":"8775","countryCode":"CH","lng":8.998612768346122,"placeName":"Luchsingen","lat":46.98012557612474,"adminName1":"Kanton Glarus"},{"adminCode3":"1632","adminName2":"Glarus","adminName3":"Glarus","adminCode2":"800","distance":"2.85264","adminCode1":"GL","postalCode":"8750","countryCode":"CH","lng":9.002485443433116,"placeName":"Riedern","lat":47.025599625015275,"adminName1":"Kanton Glarus"},{"adminCode3":"1631","adminName2":"Glarus","adminName3":"Glarus Süd","adminCode2":"800","distance":"3.30591","adminCode1":"GL","postalCode":"8774","countryCode":"CH","lng":9.031657981449875,"placeName":"Leuggelbach","lat":46.97956309637888,"adminName1":"Kanton Glarus"},{"adminCode3":"1631","adminName2":"Glarus","adminName3":"Glarus Süd","adminCode2":"800","distance":"3.71448","adminCode1":"GL","postalCode":"8772","countryCode":"CH","lng":9.045686144787961,"placeName":"Nidfurn","lat":46.98795940542871,"adminName1":"Kanton Glarus"},{"adminCode3":"1632","adminName2":"Glarus","adminName3":"Glarus","adminCode2":"800","distance":"4.04547","adminCode1":"GL","postalCode":"8750","countryCode":"CH","lng":8.947224392680244,"placeName":"Klöntal","lat":47.00532963127739,"adminName1":"Kanton Glarus"}]}
- */
 
 namespace models\services\locationproviders;
+
+use models\services\LocationServiceProvider;
+use SystemConfig;
+
 /**
  * Description of GeoNames
  *
  * @author intelWorX
  */
-class GeoNames extends \models\services\LocationServiceProvider{
-    
+class GeoNames extends LocationServiceProvider {
+
+    protected $username;
+
+    const URL_NEARBY_POSTAL_CODE = "http://api.geonames.org/findNearbyPostalCodesJSON";
+    const URL_NEARBY_ADDRESS = "http://api.geonames.org/findNearbyJSON";
+
+    public function __construct() {
+        $this->username = SystemConfig::getInstance()->geonmaes['username'];
+        $this->priority = 10000;
+    }
+
+    /**
+     * 
+     * @param type $long
+     * @param type $lat
+     * @return \models\services\LookupResult
+     * 
+     * @todo Detect country before looking up to see if postal codes are accepted.
+     * 
+     */
     public function lookUp($long, $lat) {
-        throw new Exception("Not implemented");
+        //"http://api.geonames.org/findNearbyJSON?lat=6.54839&lng=3.3841109&username=demo"
+        $data = array(
+            'lat' => $lat,
+            'lng' => $long,
+            'username' => $this->username,
+            'maxRows' => 1,
+        );
+
+        $qString = http_build_query($data);
+        $postCodeUrl = self::URL_NEARBY_POSTAL_CODE . '?' . $qString;
+        //check for postal code support
+        $postCodeResult = json_decode($this->callUrl($postCodeUrl), true);
+        if (($serviceError = $this->checkError($postCodeResult, 'postalCodes')) && $serviceError->isRateLimit()) {
+            return null;
+        }
+
+        if (!$serviceError) {
+            $resp = $postCodeResult["postalCodes"][0];
+            return new \models\services\LookupResult($resp['postalCode'], $resp['countryCode'], $resp['lng'], $resp['lat'], $resp['adminName1']);
+        }
+
+        //try using nearby placename
+        $nearByUrl = self::URL_NEARBY_ADDRESS . '?' . $qString;
+        $nearByResult = $this->callUrl($nearByUrl);
+        if ($this->checkError($nearByResult, 'geonames')) {
+            return null;
+        } else {
+            $resp = $nearByResult['geonames'][0];
+        }
+
+        return new \models\services\LookupResult('', $resp['countryCode'], $resp['lng'], $resp['lat'], $resp['adminName1']);
+    }
+
+    /**
+     * 
+     * @param type $result
+     * @return \models\services\ServiceError|null
+     */
+    private function checkError($result, $key = '') {
+
+        if (isset($result['status'])) {
+            return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_RATE_LIMIT, $result['message']);
+        }
+
+        if (empty($result) || empty($result[$key])) {
+            return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_NOT_FOUND, "Data was not found.");
+        }
+
+        return null;
     }
 
 }

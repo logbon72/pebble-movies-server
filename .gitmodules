@@ -4,3 +4,6 @@
 [submodule "application/library/framework"]
 	path = application/library/framework
 	url = git@bitbucket.org:logbon72/ideo.git
+[submodule "application/library/fluentdom"]
+	path = application/library/fluentdom
+	url = git://github.com/FluentDOM/FluentDOM

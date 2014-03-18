@@ -132,6 +132,12 @@ class ProxyController extends \controllers\AppBaseController {
         
     }
 
+    public function doTest() {
+        $imdbLoader = new \models\services\showtimeproviders\IMDBScraper();
+        $data = $imdbLoader->loadShowtimes($this->geocode);
+        var_dump($data);
+        exit;
+    }
     protected function _enforceMethod($method = 'GET') {
         if (strcasecmp($_SERVER['REQUEST_METHOD'], $method) !== 0) {
             $this->response->addError(new \main\models\ApiError(400, "Invalid request method"));

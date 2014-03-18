@@ -21,6 +21,7 @@ class DataPreloader extends \ClientRequestHook {
     //put your code here
     public function shutdown(\ClientHttpRequest $request, \main\controllers\ProxyController $controller) {
         flush();
+        set_time_limit(0);
         ob_start();
         $locationInfo = $controller->getLocationInfo();
         $showtimeService = \models\services\ShowtimeService::instance();
@@ -30,6 +31,6 @@ class DataPreloader extends \ClientRequestHook {
         }
         ob_end_clean();
         //\SystemLogger::info("Total Run time");
-        return $status;
+        return $status ? 1 : 0;
     }
 }

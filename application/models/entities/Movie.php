@@ -19,7 +19,7 @@ class Movie extends StandardEntity {
 
     public static function getOrCreate($movieData) {
         $manager = static::manager();
-        $movie = $manager->getEntity($movieData['title'], 'title');
+        $movie = $manager->getEntity($movieData['title'], 'title', null, true);
         if($movie){
             return $movie;
         }

@@ -25,7 +25,7 @@ class TheatreNearby extends StandardEntity {
                 ->where('theatre_id', $theatre->id);
 
         $manager = static::manager();
-        $nearby = $manager->getEntity($where);
+        $nearby = $manager->getEntityWhere($where);
         if ($nearby) {
             return $nearby;
         }

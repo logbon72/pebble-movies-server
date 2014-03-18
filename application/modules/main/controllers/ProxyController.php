@@ -40,6 +40,12 @@ class ProxyController extends \controllers\AppBaseController {
     protected $response;
 
     /**
+     *
+     * @var \models\services\ShowtimeService
+     */
+    protected $showtimeService;
+
+    /**
      * 
      * @param \ClientHttpRequest $req
      */
@@ -48,6 +54,7 @@ class ProxyController extends \controllers\AppBaseController {
         $req->addHook(new \main\models\RequestLogger(), 1000)
                 ->addHook(new \main\models\DataPreloader());
         parent::__construct($req);
+        $this->showtimeService = \models\services\ShowtimeService::instance();
     }
 
     protected function _initCredentials() {
@@ -117,12 +124,22 @@ class ProxyController extends \controllers\AppBaseController {
         }
     }
 
+    protected function _checkLocationInfo() {
+        if (!$this->geocode) {
+            $this->response->addError(new \main\models\ApiError("NO_GEO", "No geolocation info"));
+            $this->display();
+            exit;
+        }
+    }
+
     public function doTheatres() {
-        
+        $theatres = $this->showtimeService->getTheatres($this->geocode, $this->currentDate);
+        $this->result['theatres'] = $theatres;
     }
 
     public function doTheatreMovies() {
-        
+        $theatreId = (int) $this->_request->getQueryParam('theatre_id');
+        $this->result['theatre_movies'] = $theatreId ? $this->showtimeService->getMovies($this->geocode, $this->currentDate, $theatreId, true) : array();
     }
 
     public function doTheatreMovieShowtimes() {
@@ -130,18 +147,19 @@ class ProxyController extends \controllers\AppBaseController {
     }
 
     public function doMovies() {
-        
+        $this->result['movies'] = $this->showtimeService->getMovies($this->geocode, $this->currentDate);
     }
 
     public function doMovieTheatres() {
-        
+        $movieId = (int) $this->_request->getQueryParam('movie_id');
+        $this->result['movie_theatres'] = $movieId ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate, $movieId, true) : array();
     }
 
     public function doTest() {
-        $imdbLoader = new \models\services\showtimeproviders\IMDBScraper();
-        $data = $imdbLoader->loadShowtimes($this->geocode);
-        var_dump($data);
-        exit;
+//        $imdbLoader = new \models\services\showtimeproviders\IMDBScraper();
+//        $data = $imdbLoader->loadShowtimes($this->geocode);
+//        var_dump($data);
+//        exit;
     }
 
     protected function _enforceMethod($method = 'GET') {

@@ -30,7 +30,7 @@ class IMDBScraper extends ShowtimeServiceProvider {
     protected $currentDate;
 
     public function loadShowtimes(GeocodeCached $geocode, $date = null) {
-        
+
         $data = array(
             'countryIso' => $geocode->country_iso,
             'date' => $date ? : date('Y-m-d'),
@@ -38,8 +38,8 @@ class IMDBScraper extends ShowtimeServiceProvider {
         );
 
 
-        $pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
-        //$pageData = file_get_contents(__DIR__ . DS . "showtimes_imdb.htm");
+        //$pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
+        $pageData = file_get_contents(__DIR__ . DS . "showtimes_imdb.htm");
         $this->currentDate = $data['date'];
         return $this->extractShowtimes($pageData);
     }
@@ -54,8 +54,9 @@ class IMDBScraper extends ShowtimeServiceProvider {
         $theatreMovieShowtimes = array();
 
         if ($cinemasList) {
-            foreach ($cinemasList as $cinemaDiv) {
+            for ($i = 0; ($i <= self::THEATRE_LIMIT && $i < $cinemasList->count()); $i++) {
                 /* @var $cinemaDiv DOMQuery */
+                $cinemaDiv = new DOMQuery($cinemasList->get($i));
                 $theatreData = array();
                 $theatreTitle = $cinemaDiv->find('h3')->first();
                 if (!$theatreTitle) {
@@ -80,11 +81,6 @@ class IMDBScraper extends ShowtimeServiceProvider {
                     'theatre' => $theatreData,
                     'movies' => $this->extractMovies($movieDomList),
                 );
-
-                $foundTheatre++;
-                if ($foundTheatre >= self::THEATRE_LIMIT) {
-                    break;
-                }
             }
         }
         return $theatreMovieShowtimes;
@@ -92,7 +88,9 @@ class IMDBScraper extends ShowtimeServiceProvider {
 
     private function extractMovies(DOMQuery $movieDomList) {
         $movieResult = array();
-        foreach ($movieDomList as $movieDom) {
+
+        for ($i = 1; $i < $movieDomList->count(); $i++) {
+            $movieDom = new DOMQuery($movieDomList->get($i));
             /* @var $movieDom DOMQuery */
             $movieData = array();
             $titledom = $movieDom->find('h4')->first();
@@ -116,16 +114,18 @@ class IMDBScraper extends ShowtimeServiceProvider {
             $movieData['user_rating'] = $ratingDom ? floatval($ratingDom->text()) / self::MAX_RATING : 0;
 
 
-            $metaDom = new DOMQuery($movieDom->find('span.nobr')->get(1));
+            $metaDom = $movieDom->find('span.nobr')->eq(1);
             $metaDomScoreTmp = explode("/", preg_replace('/[^0-9\/]+/', '', $metaDom->text()));
             $movieData['critic_rating'] = floatval($metaDomScoreTmp[0]) / self::MAX_METASCORE;
 
+            //var_dump($movieDom->find('.showtimes')->count());exit;
+            //echo (preg_replace("/\s+/", " ", $movieDom->text())), "<br/><br/>";
+            //continue;
             $movieResult[] = array(
                 'movie' => $movieData,
                 'showtimes' => $this->extractTimes($movieDom->find('.showtimes'), $movieDom)
             );
         }
-
         return $movieResult;
     }
 

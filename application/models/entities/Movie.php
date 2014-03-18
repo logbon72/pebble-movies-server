@@ -15,7 +15,10 @@ namespace models\entities;
  */
 class Movie extends StandardEntity {
 
-    //put your code here
+
+    protected function initRelations() {
+        $this->setOneToMany('showtimes', Showtime::manager());
+    }
 
     public static function getOrCreate($movieData) {
         $manager = static::manager();
@@ -30,4 +33,29 @@ class Movie extends StandardEntity {
         return $manager->getEntity($movieId);
     }
 
+    /**
+     * 
+     * @param type $theatre_id
+     * @param type $date
+     * @param \DbTableFunction $order
+     * @return Showtime[]
+     */
+    public function getShowtimes($theatre_id=null, $date=null, $order=null){
+        $showtimesWhere = new \DbTableWhere();
+        if($theatre_id){
+            $showtimesWhere->where('theatre_id', $theatre_id);
+        }
+        
+        if($date){
+            $showtimesWhere->where('show_date', $date);
+        }
+
+        if(!$order){
+            $order = new \DbTableFunction('type,show_date,show_time');
+        }
+        $showtimesWhere->setOrderBy($order)
+                    ->where('movie_id', $this->_data['id']);
+        //echo $showtimesWhere; exit;
+        return Showtime::manager()->getEntitiesWhere($showtimesWhere);
+    }
 }

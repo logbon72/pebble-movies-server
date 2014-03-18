@@ -14,5 +14,19 @@ namespace models\entities;
  * @author intelWorX
  */
 class GeocodeCached extends StandardEntity {
-    //put your code here
+
+    public function getQueryWhere() {
+        $queryWhere = new \DbTableWhere();
+        $queryWhere->where('country_iso', $this->_data['country_iso']);
+        if ($this->_data['postal_code']) {
+            $queryWhere->where('postal_code', $this->_data['postal_code']);
+        } else {
+            $queryWhere->where('city', $this->_data['city']);
+        }
+        return $queryWhere;
+    }
+
+    public function getGeocode() {
+        return new \models\Geocode($this->_data['found_latitude'], $this->_data['found_longitude']);
+    }
 }

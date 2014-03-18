@@ -14,5 +14,20 @@ namespace models\entities;
  * @author intelWorX
  */
 class Movie extends StandardEntity {
+
     //put your code here
+
+    public static function getOrCreate($movieData) {
+        $manager = static::manager();
+        $movie = $manager->getEntity($movieData['title'], 'title');
+        if($movie){
+            return $movie;
+        }
+        
+        $movieId = $manager->createEntity($movieData)
+                        ->save();
+        
+        return $manager->getEntity($movieId);
+    }
+
 }

@@ -15,7 +15,7 @@ namespace models\services;
  */
 class LookupResult extends \IdeoObject {
 
-    protected static $ISO_TABLE = array(
+    public static $ISO_TABLE = array(
         "AD" => "Andorra",
         "AE" => "United Arab Emirates",
         "AF" => "Afghanistan",

@@ -19,7 +19,7 @@ class GeoNames extends LocationServiceProvider {
     const URL_NEARBY_ADDRESS = "http://api.geonames.org/findNearbyJSON";
 
     public function __construct() {
-        $this->username = SystemConfig::getInstance()->geonmaes['username'];
+        $this->username = SystemConfig::getInstance()->geonames['username'];
         $this->priority = 10000;
     }
 
@@ -74,7 +74,7 @@ class GeoNames extends LocationServiceProvider {
     private function checkError($result, $key = '') {
 
         if (isset($result['status'])) {
-            return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_RATE_LIMIT, $result['message']);
+            return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_RATE_LIMIT, $result['status']['message'] . "({$result['status']['value']})");
         }
 
         if (empty($result) || empty($result[$key])) {

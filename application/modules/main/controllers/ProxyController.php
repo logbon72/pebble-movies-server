@@ -28,6 +28,8 @@ class ProxyController extends \controllers\AppBaseController {
      * @var \models\entities\GeocodeCached
      */
     protected $geocode;
+    protected $currentDate;
+    protected $result = array();
 
     const ALLOWED_LAG = 300;
 
@@ -39,7 +41,7 @@ class ProxyController extends \controllers\AppBaseController {
 
     public function __construct($req) {
         $this->response = new \main\models\Response();
-        $this->_request->addHook(new \main\models\RequestLogger());
+        $req->addHook(new \main\models\RequestLogger());
         parent::__construct($req);
     }
 
@@ -47,7 +49,8 @@ class ProxyController extends \controllers\AppBaseController {
         $token = $this->_request->getQueryParam('token');
         $this->userDevice = \models\entitymanagers\UserDeviceManager::validate($token, $this->requestId);
         $action = $this->_request->getAction();
-        if (!in_array($action, $this->skipAuths)) {
+        $testMode = !\Application::currentInstance()->isProd() && $this->_request->getQueryParam('skip') == 1;
+        if (!$testMode && !in_array($action, $this->skipAuths)) {
             $this->response->forbidden();
             $this->response->addError(new \main\models\ApiError("FORBIDDEN", "Access denied"));
             $this->display();
@@ -69,13 +72,15 @@ class ProxyController extends \controllers\AppBaseController {
             $latLng = $this->_request->getQueryParam('latlng');
             $this->geocode = $locationService->lookUp($latLng);
         }
-        
-        if(!$this->geocode && ($this->_request->hasQueryParam('city') || $this->_request->hasQueryParam('country') || $this->_request->hasQueryParam('postalCode'))){
+
+        if (!$this->geocode && ($this->_request->hasQueryParam('city') || $this->_request->hasQueryParam('country') || $this->_request->hasQueryParam('postalCode'))) {
             $countryIso = $this->_request->getQueryParam('country');
             $city = $this->_request->getQueryParam('city');
             $postalCode = $this->_request->getQueryParam('postalCode');
             $this->geocode = $locationService->postalCodeLookup($postalCode, $countryIso, $city);
         }
+
+        $this->currentDate = $this->_request->getQueryParam('date') ? : date("Y-m-d");
     }
 
     public function doDefault() {
@@ -103,7 +108,7 @@ class ProxyController extends \controllers\AppBaseController {
 
         if ($this->userDevice) {
             //set to body
-            $this->response->setResult(array('device' => $this->userDevice->toArray(0)));
+            $this->result = array('device' => $this->userDevice->toArray(0));
         }
     }
 

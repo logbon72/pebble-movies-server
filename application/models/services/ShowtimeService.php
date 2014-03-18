@@ -9,7 +9,6 @@
 namespace models\services;
 
 use DbTableFunction;
-use DbTableWhere;
 use IdeoObject;
 use models\entities\GeocodeCached;
 use models\entities\Showtime;
@@ -37,6 +36,8 @@ class ShowtimeService extends IdeoObject {
      */
     protected $showtimeManager;
 
+    const PROVIDERS_DIR = 'locationproviders';
+
     /**
      *
      * @var StandardEntityManager
@@ -49,8 +50,32 @@ class ShowtimeService extends IdeoObject {
      */
     protected $theatreNearByManager;
 
+    /**
+     *
+     * @var ShowtimeServiceProvider[]
+     */
+    protected $serviceProviderList = array();
+
     private function __construct() {
         //load providers
+        $serviceProvidersDir = __DIR__ . DS . 'showtimeproviders';
+        $directoryIterator = new \DirectoryIterator($serviceProvidersDir);
+        while ($directoryIterator->valid()) {
+            if ($directoryIterator->isFile() && $directoryIterator->isReadable()) {
+                $className = __NAMESPACE__ . '\\showtimeproviders\\' . explode('.', $directoryIterator->getBasename())[0];
+                if (class_exists($className)) {
+                    $this->serviceProviderList[] = new $className();
+                }
+            }
+            $directoryIterator->next();
+        }
+
+        if (!count($this->serviceProviderList)) {
+            throw new \InvalidArgumentException("There are no service providers defined for showtimes.");
+        }
+
+        \ComparableObjectSorter::sort($this->serviceProviderList, false, true);
+
         //initialize showtime manager
         $this->showtimeManager = Showtime::manager();
         $this->theatreManager = Theatre::manager();
@@ -58,14 +83,7 @@ class ShowtimeService extends IdeoObject {
     }
 
     public function dataLoaded(GeocodeCached $locationInfo, $date = null) {
-        $queryWhere = new DbTableWhere();
-        $queryWhere->where('country_iso', $locationInfo->country_iso);
-        if ($locationInfo->postal_code) {
-            $queryWhere->where('postal_code', $locationInfo->postal_code);
-        } else {
-            $queryWhere->where('city', $locationInfo->city);
-        }
-
+        $queryWhere = $locationInfo->getQueryWhere();
         if ($date) {
             $queryWhere->where('s.show_date', $date);
         }
@@ -77,6 +95,59 @@ class ShowtimeService extends IdeoObject {
                         ->where($queryWhere)
                         ->query(true) > 0
         ;
+    }
+
+    /**
+     * Fetches data for the showtimes for the soecified info.
+     * @param \models\entities\GeocodeCached $locationInfo
+     * @param type $date
+     * @param type $forceReload
+     * @return boolean
+     */
+    public function loadData(GeocodeCached $locationInfo, $date = null, $forceReload = false) {
+        if (!$forceReload && $this->dataLoaded($locationInfo, $date)) {
+            return true;
+        }
+
+        $results = array();
+        foreach ($this->serviceProviderList as $serviceProvider) {
+            if ($serviceProvider->supports($locationInfo)) {
+                $results = $serviceProvider->loadShowtimes($locationInfo, $date);
+                if (!empty($results)) {
+                    //cache and save...
+                    return $this->cacheResult($results);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    protected function cacheResult($results) {
+        //throw new Exception("Work in progress");
+        foreach ($results as $theatreMovieShowtime) {
+            $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre']);
+            if ($theatre) {
+                foreach ($theatreMovieShowtime['movies'] as $movieShowtimeData) {
+                    $movie = \models\entities\Movie::getOrCreate($movieShowtimeData['movie']);
+                    if ($movie) {
+                        return $this->cacheShowtimes($theatre, $movie, $movieShowtimeData['showtimes']);
+                    }
+                }
+            } else {
+                \SystemLogger::warn("Could not create theatre with data: ", $theatreMovieShowtime['theatre']);
+            }
+        }
+    }
+
+    protected function cacheShowtimes(Theatre $theatre, models\entities\Movie $movie, $showtimes) {
+        foreach ($showtimes as $k => $showtime) {
+            $showtimes[$k]['theatre_id'] = $theatre->id;
+            $showtimes[$k]['movie_id'] = $movie->id;
+        }
+        
+        return Showtime::table()
+                    ->insert($showtimes, true, true);
     }
 
     public static function instance() {

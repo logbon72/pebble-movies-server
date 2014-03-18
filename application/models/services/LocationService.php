@@ -36,7 +36,7 @@ class LocationService extends \IdeoObject {
         $directoryIterator = new \DirectoryIterator($serviceProvidersDir);
         while ($directoryIterator->valid()) {
             if ($directoryIterator->isFile() && $directoryIterator->isReadable()) {
-                $className = __NAMESPACE__ . '\\' . explode('.', $directoryIterator->getBasename())[0];
+                $className = __NAMESPACE__ . '\\locationproviders\\' . explode('.', $directoryIterator->getBasename())[0];
                 if (class_exists($className)) {
                     $this->serviceProviderList[] = new $className();
                 }
@@ -78,13 +78,14 @@ class LocationService extends \IdeoObject {
 
         foreach ($this->serviceProviderList as $serviceProvier) {
             $lookUpResult = $serviceProvier->lookUp($preciseLong, $preciseLat);
+            \SystemLogger::debug("Making call with: ", $serviceProvier->getClassBasic());
             if ($lookUpResult) {
                 return $this->cacheLookup($lookUpResult, $preciseLong, $preciseLat);
             } else {
                 if (($lastError = $serviceProvier->getLastError(true))) {
-                    \SystemLogger::warn("Error... {$lastError->getMessage()} TYPE: {$lastError->getType()}");
+                    \SystemLogger::warn("Error: {$lastError->getMessage()} TYPE: {$lastError->getType()}");
                 }
-                if (!$lastError->isRateLimit()) {
+                if ($lastError && !$lastError->isRateLimit()) {
                     break;
                 }
             }

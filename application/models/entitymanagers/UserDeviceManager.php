@@ -19,7 +19,7 @@ class UserDeviceManager extends AppEntityManager {
         $parts = explode(" ", microtime());
 
         $data = array(
-            'id' => $parts[1] . round($parts * 1000),
+            'id' => $parts[1] . round($parts[0] * 1000),
             'secret_key' => \Utilities::getRandomCode(64),
             'device_uuid' => $device_uuid
         );

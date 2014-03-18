@@ -118,6 +118,7 @@ class ShowtimeService extends IdeoObject {
         foreach ($this->serviceProviderList as $serviceProvider) {
             if ($serviceProvider->supports($locationInfo)) {
                 $results = $serviceProvider->loadShowtimes($locationInfo, $date);
+                ///debug_op($results, true);
                 if (!empty($results)) {
                     //cache and save...
                     return $this->cacheResult($results, $locationInfo);
@@ -157,6 +158,92 @@ class ShowtimeService extends IdeoObject {
                         ->insert($showtimes, true, true);
     }
 
+    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id=null, $includeShowtimes=null) {
+        if (!$this->loadData($locationInfo, $currentDate)) {
+            return array();
+        }
+        $where = $locationInfo->getQueryWhere()
+                ->where('s.show_date', $currentDate)
+                ->setOrderBy('distance_m', 'ASC')
+                ->setGroupBy('t.id');
+
+        if($movie_id){
+            $where->where('s.movie_id', $movie_id);
+        }
+        
+        $ids = Theatre::table()->selectFrom('t.id', 't')
+                ->innerJoin(array('tn' => TheatreNearby::table()), 't.id = tn.theatre_id', array('tn.distance_m'))
+                ->innerJoin(array('s' => Showtime::table()), 's.theatre_id = t.id')
+                ->where($where)
+                ->query()
+        ;
+
+        $theatres = array();
+        foreach ($ids as $idRow) {
+            $theatre = $this->theatreManager->getEntity($idRow['id']);
+            /*@var $theatre Theatre*/
+            if ($theatre) {
+                $theatreArr = $theatre->toArray(Theatre::TO_ARRAY_MVA, 1, array('id', 'name', 'address'));
+                $theatreArr['distance_m'] = $idRow['distance_m'];
+                if($includeShowtimes){
+                    $theatreArr['showtimes'] = [];
+                    $showtimes=  $theatre->getShowtimes($movie_id, $currentDate);
+                    foreach ($showtimes as $showtime){
+                        $theatreArr['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
+                    }
+                }
+                $theatres[] = $theatreArr;
+            }
+        }
+
+        return $theatres;
+    }
+
+    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false) {
+        if (!$this->loadData($locationInfo, $currentDate)) {
+            return array();
+        }
+        $where = $locationInfo->getQueryWhere()
+                ->where('s.show_date', $currentDate)
+        ;
+
+        if ($theatre_id) {
+            $where->where('s.theatre_id', $theatre_id);
+        }
+
+        $idsQuery = Movie::table()->selectFrom('m.id', 'm')
+                ->innerJoin(array('s' => Showtime::table()), 's.movie_id = m.id')
+                ->innerJoin(array('tn' => TheatreNearby::table()), 's.theatre_id = tn.theatre_id')
+                ->where($where)
+                ->generateSQL()
+        ;
+
+        $moviesWhere = (new \DbTableWhere())
+                ->whereInSql('id', $idsQuery)
+                ->setOrderBy('title');
+
+        $movieList = Movie::manager()
+                ->getEntitiesWhere($moviesWhere);
+
+        $movies = array();
+        $movieFields = array('id', 'title', 'genre', 'user_rating', 'rated', 'critic_rating', 'runtime');
+        Movie::setToArrayFields($movieFields);
+        foreach ($movieList as $movieInList) {
+            /* @var $movieInList Movie */
+            $movie = $movieInList->toArray();
+            $this->_filterObject($movie);
+            if ($includeShowtimes) {
+                $movie['showtimes'] = array();
+                foreach ($movieInList->getShowtimes($theatre_id, $currentDate) as $showtime) {
+                    $movie['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
+                }
+            }
+            $movies[] = $movie;
+        }
+
+        return $movies;
+    }
+
     /**
      * 
      * @return self
@@ -166,6 +253,22 @@ class ShowtimeService extends IdeoObject {
             self::$instance = new self();
         }
         return self::$instance;
+    }
+
+    protected function _filterObject(&$object) {
+        if (is_array($object)) {
+            foreach ($object as &$val) {
+                $this->_filterObject($val);
+            }
+        } else {
+            if (preg_match('/^\d+\.\d+$/', $object)) {
+                $object = doubleval($object);
+            } elseif (is_numeric($object) && $object < PHP_INT_MAX) {
+                $object = intval($object);
+            } elseif (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $object)) {
+                $object = date("c", strtotime($object));
+            }
+        }
     }
 
 }

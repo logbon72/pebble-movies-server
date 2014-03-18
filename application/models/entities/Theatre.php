@@ -16,7 +16,7 @@ namespace models\entities;
 class Theatre extends StandardEntity {
 
     protected function initRelations() {
-        $this->setOneToMany('nearbys', TheatreNearby::manager(), 'distance_km')
+        $this->setOneToMany('nearbys', TheatreNearby::manager(), 'distance_m')
                 ->setOneToMany('showtimes', Showtime::manager(), 'show_date DESC, show_time ASC');
     }
 
@@ -24,36 +24,63 @@ class Theatre extends StandardEntity {
         throw new \RuntimeException("Yet to implement");
     }
 
-    public static function getOrCreate($theatreData, $locationInfo = null, $lookUpAddress=false) {
+    public static function getOrCreate($theatreData, $locationInfo = null, $lookUpAddress = false) {
         $manager = self::manager();
         $findWhere = (new \DbTableWhere())
-                        ->where('name', $theatreData['name'])
-                        ->where('address', $theatreData['address'])
-                        ;
-        if(($foundTheatre = $manager->getEntityWhere($findWhere))){
+                ->where('name', $theatreData['name'])
+                ->where('address', $theatreData['address'])
+        ;
+        if (($foundTheatre = $manager->getEntityWhere($findWhere))) {
             TheatreNearby::getOrCreate($locationInfo, $foundTheatre);
             return $foundTheatre;
         }
-        
-        if($lookUpAddress && (!$theatreData['longitude'] || !$theatreData['latitude'])){
+
+        if ($lookUpAddress && (!$theatreData['longitude'] || !$theatreData['latitude'])) {
             $geoCode = \models\services\LocationService::instance()->addressLookup($theatreData['address']);
-            if($geoCode){
+            if ($geoCode) {
                 $theatreData['longitude'] = $geoCode->found_longitude;
                 $theatreData['latitude'] = $geoCode->found_latitude;
             }
         }
-        
+
         $theatreId = $manager->createEntity($theatreData)->save();
-        if($theatreId){
+        if ($theatreId) {
             $theatre = $manager->getEntity($theatreId);
             TheatreNearby::getOrCreate($locationInfo, $theatre);
             return $theatre;
         }
         return null;
     }
-    
+
     public function getGeocode() {
         return new \models\GeoLocation($this->_data['latitude'], $this->_data['longitude'], $this->_data['address']);
+    }
+
+    /**
+     * 
+     * @param int $movie_id
+     * @param string $date
+     * @param string|\DbTableFunction $order
+     * @return Showtime[]
+     */
+    public function getShowtimes($movie_id = null, $date = null, $order = null) {
+        $showtimesWhere = new \DbTableWhere();
+        if ($movie_id) {
+            $showtimesWhere->where('movie_id', $movie_id);
+        }
+
+        if ($date) {
+            $showtimesWhere->where('show_date', $date);
+        }
+
+        if (!$order) {
+            $order = new \DbTableFunction('type,show_date,show_time');
+        }
+        
+        $showtimesWhere->setOrderBy($order)
+                ->where('theatre_id', $this->_data['id']);
+        
+        return Showtime::manager()->getEntitiesWhere($showtimesWhere);
     }
 
 }

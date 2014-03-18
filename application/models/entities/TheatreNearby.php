@@ -31,7 +31,7 @@ class TheatreNearby extends StandardEntity {
         }
 
         $data = $locationInfo->toArray(0, 2, array('country_iso', 'postal_code', 'country', 'city'));
-        $data['distance'] = \models\services\LocationService::instance()->computeDistance($locationInfo->getGeocode(), $theatre->getGeocode());
+        $data['distance_m'] = \models\services\LocationService::instance()->computeDistance($locationInfo->getGeocode(), $theatre->getGeocode());
         $data['theatre_id'] = $theatre->id;
         $nearbyId = $manager->createEntity($data)->save();
         return $nearbyId ? $manager->getEntity($nearbyId) : null;

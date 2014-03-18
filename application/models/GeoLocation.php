@@ -13,19 +13,26 @@ namespace models;
  *
  * @author intelWorX
  */
-class Geocode extends \IdeoObject{
+class GeoLocation extends \IdeoObject {
+
     //put your code here
     protected $longitude;
     protected $latitude;
-    
-    public function __construct($latitude, $longitude) {
+    protected $address;
+
+    public function __construct($latitude, $longitude, $address = null) {
         $this->longitude = $latitude;
         $this->latitude = $longitude;
+        $this->address = $address;
         $this->setSynthesizeFields(true);
     }
 
-    
-    public function __toString() {
-        return $this->latitude . ','. $this->longitude;
+    public function getAddress() {
+        return $this->address;
     }
+
+    public function __toString() {
+        return $this->latitude . ',' . $this->longitude;
+    }
+
 }

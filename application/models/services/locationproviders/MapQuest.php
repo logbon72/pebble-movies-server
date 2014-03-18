@@ -9,7 +9,7 @@
 namespace models\services\locationproviders;
 
 use Exception;
-use models\Geocode;
+use models\GeoLocation;
 use models\services\AddressLookupI;
 use models\services\LocationDistanceCheckI;
 use models\services\LocationServiceProvider;
@@ -22,12 +22,15 @@ use models\services\LocationServiceProvider;
 class MapQuest extends LocationServiceProvider implements LocationDistanceCheckI, AddressLookupI {
 
     protected $apiKey;
+
     public function __construct() {
+        $this->priority = -1;
         $this->apiKey = \SystemConfig::getInstance()->map_quest['api_key'];
     }
-    
-    public function distanceLookup(Geocode $source, Geocode $destination) {
-        throw new Exception("Unimplemented");
+
+    public function distanceLookup(GeoLocation $source, GeoLocation $destination) {
+        $this->lastError= new \models\services\ServiceError(\models\services\ServiceError::ERR_RATE_LIMIT, "yet to implement");
+        return -1;
     }
 
     public function addressLookup($address) {

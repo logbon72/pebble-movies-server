@@ -8,14 +8,19 @@
 
 namespace models\services\showtimeproviders;
 
-require_once LIB_DIR . 'simple_html_dom.php';
+use models\entities\GeocodeCached;
+use models\entities\Showtime;
+use models\services\ShowtimeServiceProvider;
+use QueryPath;
+use QueryPath\DOMQuery;
+use SystemLogger;
 
 /**
  * Description of IMDBScraper
  *
  * @author intelWorX
  */
-class IMDBScraper extends \models\services\ShowtimeServiceProvider {
+class IMDBScraper extends ShowtimeServiceProvider {
 
     const SHOWTIMES_PAGE = 'http://www.imdb.com/showtimes/{countryIso}/{postalCode}/{date}';
     const THEATRE_LIMIT = 15;
@@ -24,7 +29,8 @@ class IMDBScraper extends \models\services\ShowtimeServiceProvider {
 
     protected $currentDate;
 
-    public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null) {
+    public function loadShowtimes(GeocodeCached $geocode, $date = null) {
+        
         $data = array(
             'countryIso' => $geocode->country_iso,
             'date' => $date ? : date('Y-m-d'),
@@ -39,22 +45,21 @@ class IMDBScraper extends \models\services\ShowtimeServiceProvider {
     }
 
     protected function extractShowtimes($pageData) {
-        //$('#cinemas-at-list > .list_item').each(function(i, el){console.log("Le:" + $(el).find('> .list_item').length)});
-
-        $imdbPage = new \simple_html_dom($pageData);
-        \SystemLogger::debug(__CLASS__, "Extracting theatres...");
+        $imdbPage = QueryPath::withHTML($pageData);
+        SystemLogger::debug(__CLASS__, "Extracting theatres...");
+        //$cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
         $cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
-        \SystemLogger::debug(__CLASS__, "Found: ", count((array) $cinemasList));
+        SystemLogger::debug(__CLASS__, "Found: ", count((array) $cinemasList));
         $foundTheatre = 0;
         $theatreMovieShowtimes = array();
 
         if ($cinemasList) {
             foreach ($cinemasList as $cinemaDiv) {
-                /* @var $cinemaDiv \simple_html_dom_node */
+                /* @var $cinemaDiv DOMQuery */
                 $theatreData = array();
-                $theatreTitle = $cinemaDiv->find('h3', 0);
+                $theatreTitle = $cinemaDiv->find('h3')->first();
                 if (!$theatreTitle) {
-                    \SystemLogger::debug(__CLASS__, "No theatre found");
+                    SystemLogger::debug(__CLASS__, "No theatre found");
                     continue;
                 }
 
@@ -65,9 +70,9 @@ class IMDBScraper extends \models\services\ShowtimeServiceProvider {
                 $addressSpan = $addressSpanTmp ? preg_replace('/\s+/', ' ', $addressSpanTmp->text()) : "";
                 $theatreData['address'] = trim(explode('|', $addressSpan)[0]);
                 $movieDomList = $cinemaDiv->find('.list_item');
-                \SystemLogger::info(__CLASS__, "Number of Movie: ", count($movieDomList));
-                if (!$movieDomList || !count($movieDomList)) {
-                    \SystemLogger::debug(__CLASS__, "No movies found");
+                SystemLogger::info(__CLASS__, "Number of Movie: ", count($movieDomList));
+                if (!count($movieDomList)) {
+                    SystemLogger::debug(__CLASS__, "No movies found");
                     continue;
                 }
 
@@ -85,40 +90,39 @@ class IMDBScraper extends \models\services\ShowtimeServiceProvider {
         return $theatreMovieShowtimes;
     }
 
-    private function extractMovies(\simple_html_dom_node $movieDomList) {
+    private function extractMovies(DOMQuery $movieDomList) {
         $movieResult = array();
         foreach ($movieDomList as $movieDom) {
-            /* @var $movieDom \simple_html_dom_node */
+            /* @var $movieDom DOMQuery */
             $movieData = array();
-            $titledom = $movieDom->find('h4', 0);
+            $titledom = $movieDom->find('h4')->first();
             if (!$titledom) {
                 continue;
             }
 
-            $movieData['title'] = preg_replace('/\s+\(\d\d\d\d\)$/', trim($titledom->text()), $movieDom);
 
-            $imgDomTmp = $movieDom->find('.image_sm img', 0);
-            $movieData['poster_url'] = $imgDomTmp ? $imgDomTmp->getAttribute('src') : '';
+            $movieData['title'] = preg_replace('/\s+\(\d\d\d\d\)$/', '', trim($titledom->text()));
 
-            $certImg = $movieDom->find('.certimage', 0);
-            $movieData['rated'] = $certImg ? $certImg->getAttribute('title') : '';
+            $imgDomTmp = $movieDom->find('.image_sm img')->first();
+            $movieData['poster_url'] = $imgDomTmp ? $imgDomTmp->attr('src') : '';
 
-            $timeSpan = $movieDom->find('time', 0);
+            $certImg = $movieDom->find('.certimage')->first();
+            $movieData['rated'] = $certImg ? $certImg->attr('title') : '';
+
+            $timeSpan = $movieDom->find('time')->first();
             $movieData['runtime'] = $timeSpan ? intval(trim($timeSpan->text())) : -1;
 
-            $ratingDom = $movieDom->find('[itemprop=ratingValue]', 0);
+            $ratingDom = $movieDom->find('[itemprop=ratingValue]')->first();
             $movieData['user_rating'] = $ratingDom ? floatval($ratingDom->text()) / self::MAX_RATING : 0;
 
-            $metaDom = $movieDom->find('span.nobr', 1);
-            if ($metaDom) {
-                $metaDomScoreTmp = explode("/", preg_replace('/[^0-9\/]+/', '', $metaDom->text()));
-                $movieData['critic_rating'] = floatval($metaDomScoreTmp) / self::MAX_METASCORE;
-            }
 
-            $showtimesDom = $movieDom->find('.showtimes');
+            $metaDom = new DOMQuery($movieDom->find('span.nobr')->get(1));
+            $metaDomScoreTmp = explode("/", preg_replace('/[^0-9\/]+/', '', $metaDom->text()));
+            $movieData['critic_rating'] = floatval($metaDomScoreTmp[0]) / self::MAX_METASCORE;
+
             $movieResult[] = array(
                 'movie' => $movieData,
-                'showtimes' => $showtimesDom ? $this->extractTimes($showtimesDom, $movieDom) : array()
+                'showtimes' => $this->extractTimes($movieDom->find('.showtimes'), $movieDom)
             );
         }
 
@@ -127,20 +131,21 @@ class IMDBScraper extends \models\services\ShowtimeServiceProvider {
 
     /**
      * 
-     * @param \simple_html_dom_node $showtimesDomList
-     * @param \simple_html_dom_node $movieDom
+     * @param DOMQuery $showtimesDomList
+     * @param DOMQuery $movieDom
      */
     private function extractTimes($showtimesDomList, $movieDom) {
 
         $index = 0;
+        $times = array();
+        //var_dump(count($showtimesDomList));exit;
         foreach ($showtimesDomList as $showtimesDom) {
-            $times = array();
-            $getTicketsLink = $showtimesDom->find('a', 0);
-            $showtimeTypeDom = $movieDom->find('h5.li_group', $index++);
+            $getTicketsLink = $showtimesDom->find('a')->first();
+            $showtimeTypeDom = new DOMQuery($movieDom->find('h5.li_group')->get($index++));
             $showtimeType = $showtimeTypeDom ? $this->getShowtimeType(trim($showtimeTypeDom->text(), ' :\r\n')) : 'digital';
             if ($getTicketsLink) {
-                $timeList = explode('|', $getTicketsLink->getAttribute('data-times'));
-                $link = $getTicketsLink->getAttribute('href');
+                $timeList = explode('|', $getTicketsLink->attr('data-times'));
+                $link = $getTicketsLink->attr('href');
                 foreach ($timeList as $movieTime) {
                     $times[] = array(
                         'show_date' => $this->currentDate,
@@ -150,9 +155,6 @@ class IMDBScraper extends \models\services\ShowtimeServiceProvider {
                     );
                 }
             } else {
-                //for none links
-                //$(movieDomList[4]).find('.showtimes').text().replace(/\s+/g, ' ').trim()
-                //"1:00 pm | 3:30 | 6:15 | 9:00"
                 $showtimes = trim(preg_replace('/\s+/', ' ', $showtimesDom->text()));
                 $showtimesArr = preg_split('/[\|\s]+/', $showtimes);
                 $lastAp = 'am';
@@ -175,12 +177,12 @@ class IMDBScraper extends \models\services\ShowtimeServiceProvider {
     }
 
     private function getShowtimeType($text) {
-        if (preg_match('/$3D/i', $text) === 'showtimes') {
-            return 'digital 3D';
-        } elseif (preg_match('/imax/i', $text)) {
-            return 'IMAX';
+        if (preg_match('/imax/i', $text)) {
+            return Showtime::TYPE_IMAX;
+        } elseif (preg_match('/3D/i', $text)) {
+            return Showtime::TYPE_3D;
         } else {
-            return 'digital';
+            return Showtime::TYPE_2D;
         }
     }
 

@@ -8,13 +8,18 @@
 
 namespace models\services;
 
+use ComparableObjectSorter;
 use DbTableFunction;
+use DirectoryIterator;
 use IdeoObject;
+use InvalidArgumentException;
 use models\entities\GeocodeCached;
+use models\entities\Movie;
 use models\entities\Showtime;
 use models\entities\Theatre;
 use models\entities\TheatreNearby;
 use models\entitymanagers\StandardEntityManager;
+use SystemLogger;
 
 /**
  * Description of ShowtimeService
@@ -59,7 +64,7 @@ class ShowtimeService extends IdeoObject {
     private function __construct() {
         //load providers
         $serviceProvidersDir = __DIR__ . DS . 'showtimeproviders';
-        $directoryIterator = new \DirectoryIterator($serviceProvidersDir);
+        $directoryIterator = new DirectoryIterator($serviceProvidersDir);
         while ($directoryIterator->valid()) {
             if ($directoryIterator->isFile() && $directoryIterator->isReadable()) {
                 $className = __NAMESPACE__ . '\\showtimeproviders\\' . explode('.', $directoryIterator->getBasename())[0];
@@ -71,10 +76,10 @@ class ShowtimeService extends IdeoObject {
         }
 
         if (!count($this->serviceProviderList)) {
-            throw new \InvalidArgumentException("There are no service providers defined for showtimes.");
+            throw new InvalidArgumentException("There are no service providers defined for showtimes.");
         }
 
-        \ComparableObjectSorter::sort($this->serviceProviderList, false, true);
+        ComparableObjectSorter::sort($this->serviceProviderList, false, true);
 
         //initialize showtime manager
         $this->showtimeManager = Showtime::manager();
@@ -99,7 +104,7 @@ class ShowtimeService extends IdeoObject {
 
     /**
      * Fetches data for the showtimes for the soecified info.
-     * @param \models\entities\GeocodeCached $locationInfo
+     * @param GeocodeCached $locationInfo
      * @param type $date
      * @param type $forceReload
      * @return boolean
@@ -115,7 +120,7 @@ class ShowtimeService extends IdeoObject {
                 $results = $serviceProvider->loadShowtimes($locationInfo, $date);
                 if (!empty($results)) {
                     //cache and save...
-                    return $this->cacheResult($results);
+                    return $this->cacheResult($results, $locationInfo);
                 }
             }
         }
@@ -123,33 +128,39 @@ class ShowtimeService extends IdeoObject {
         return false;
     }
 
-    protected function cacheResult($results) {
+    protected function cacheResult($results, $locationInfo) {
         //throw new Exception("Work in progress");
+        $return = 0;
         foreach ($results as $theatreMovieShowtime) {
-            $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre']);
+            $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre'], $locationInfo);
             if ($theatre) {
                 foreach ($theatreMovieShowtime['movies'] as $movieShowtimeData) {
-                    $movie = \models\entities\Movie::getOrCreate($movieShowtimeData['movie']);
+                    $movie = Movie::getOrCreate($movieShowtimeData['movie']);
                     if ($movie) {
-                        return $this->cacheShowtimes($theatre, $movie, $movieShowtimeData['showtimes']);
+                        $return += $this->cacheShowtimes($theatre, $movie, $movieShowtimeData['showtimes']);
                     }
                 }
             } else {
-                \SystemLogger::warn("Could not create theatre with data: ", $theatreMovieShowtime['theatre']);
+                SystemLogger::warn("Could not create theatre with data: ", $theatreMovieShowtime['theatre']);
             }
         }
+        return $results;
     }
 
-    protected function cacheShowtimes(Theatre $theatre, models\entities\Movie $movie, $showtimes) {
+    protected function cacheShowtimes(Theatre $theatre, Movie $movie, $showtimes) {
         foreach ($showtimes as $k => $showtime) {
             $showtimes[$k]['theatre_id'] = $theatre->id;
             $showtimes[$k]['movie_id'] = $movie->id;
         }
-        
+
         return Showtime::table()
-                    ->insert($showtimes, true, true);
+                        ->insert($showtimes, true, true);
     }
 
+    /**
+     * 
+     * @return self
+     */
     public static function instance() {
         if (!self::$instance) {
             self::$instance = new self();

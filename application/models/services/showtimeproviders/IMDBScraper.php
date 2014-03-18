@@ -38,8 +38,8 @@ class IMDBScraper extends ShowtimeServiceProvider {
         );
 
 
-        //$pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
-        $pageData = file_get_contents(__DIR__ . DS . "showtimes_imdb.htm");
+        $pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
+        //$pageData = file_get_contents(__DIR__ . DS . "showtimes_imdb.htm");
         $this->currentDate = $data['date'];
         return $this->extractShowtimes($pageData);
     }

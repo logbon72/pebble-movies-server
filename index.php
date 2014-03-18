@@ -7,6 +7,7 @@ ini_set('memory_limit', "256M");
 
 require_once APP_DIR . "library/framework/Application.php";
 //require_once APP_DIR . 'SessionInit.php';
+require_once 'vendor/autoload.php';
 define("APP_DEFAULT_MODULE", 'main');
 
 try {

@@ -8,7 +8,7 @@
 
 namespace models\services\locationproviders;
 
-use models\Geocode;
+use models\GeoLocation;
 use models\services\AddressLookupI;
 use models\services\LocationDistanceCheckI;
 use models\services\LocationServiceProvider;
@@ -24,23 +24,23 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
     protected $apiKey;
 
     const URL_LOOKUP = 'http://dev.virtualearth.net/REST/v1/Locations/{lat},{long}?o=json&key={apiKey}&maxResults=1';
-    const URL_ADDRESS = 'http://dev.virtualearth.net/REST/v1/Locations?query={address}&key={apiKey}&maxResults=1';
-    const URL_ROUTE = 'http://dev.virtualearth.net/REST/V1/Routes/Driving?o=json&wp.0={sourceLatLong}&wp.1={destLatLong}&key={apiKey}&km';
+    const URL_ADDRESS = 'http://dev.virtualearth.net/REST/v1/Locations?query={query}&key={apiKey}&maxResults=1';
+    const URL_ROUTE = 'http://dev.virtualearth.net/REST/V1/Routes/Driving?output=json&wp.0={sourceLatLong}&wp.1={destLatLong}&key={apiKey}&du=km';
     const STATUS_SUCCESS = 200;
 
     public function __construct() {
         $this->apiKey = SystemConfig::getInstance()->bing['api_key'];
-        $this->priority = 100;
+        $this->priority = 900;
     }
 
-    public function distanceLookup(Geocode $source, Geocode $destination) {
+    public function distanceLookup(GeoLocation $source, GeoLocation $destination) {
         $data = array(
-            "sourceLatLong" => strval($source),
-            "destLatLong" => strval($destination),
+            "sourceLatLong" => $source->getAddress() ? : strval($source),
+            "destLatLong" => $destination->getAddress()? : strval($destination),
             'apiKey' => $this->apiKey,
         );
 
-        $result = $this->callUrl($this->formatUrl(self::URL_ROUTE, $data));
+        $result = $this->callUrl($this->formatUrl(self::URL_ROUTE, $data, false));
         $resultDecoded = json_decode($result, true);
         if ($this->checkError($resultDecoded)) {
             return -1;
@@ -57,12 +57,12 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
             'apiKey' => $this->apiKey,
         );
 
-        $result = $this->callUrl($this->formatUrl(self::URL_ADDRESS, $data));
+        $result = $this->callUrl($this->formatUrl(self::URL_ADDRESS, $data), true);
         $resultDecoded = json_decode($result, true);
         if ($this->checkError($resultDecoded)) {
             return null;
         }
-        
+
         return $this->convertToLookupResult($resultDecoded);
     }
 

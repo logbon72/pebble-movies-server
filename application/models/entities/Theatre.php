@@ -24,7 +24,7 @@ class Theatre extends StandardEntity {
         throw new \RuntimeException("Yet to implement");
     }
 
-    public static function getOrCreate($theatreData, $locationInfo = null) {
+    public static function getOrCreate($theatreData, $locationInfo = null, $lookUpAddress=false) {
         $manager = self::manager();
         $findWhere = (new \DbTableWhere())
                         ->where('name', $theatreData['name'])
@@ -35,7 +35,7 @@ class Theatre extends StandardEntity {
             return $foundTheatre;
         }
         
-        if(!$theatreData['longitude'] || !$theatreData['latitude']){
+        if($lookUpAddress && (!$theatreData['longitude'] || !$theatreData['latitude'])){
             $geoCode = \models\services\LocationService::instance()->addressLookup($theatreData['address']);
             if($geoCode){
                 $theatreData['longitude'] = $geoCode->found_longitude;
@@ -53,7 +53,7 @@ class Theatre extends StandardEntity {
     }
     
     public function getGeocode() {
-        return new \models\Geocode($this->_data['latitude'], $this->_data['longitude']);
+        return new \models\GeoLocation($this->_data['latitude'], $this->_data['longitude'], $this->_data['address']);
     }
 
 }

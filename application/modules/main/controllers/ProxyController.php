@@ -39,9 +39,14 @@ class ProxyController extends \controllers\AppBaseController {
      */
     protected $response;
 
+    /**
+     * 
+     * @param \ClientHttpRequest $req
+     */
     public function __construct($req) {
         $this->response = new \main\models\Response();
-        $req->addHook(new \main\models\RequestLogger());
+        $req->addHook(new \main\models\RequestLogger(), 1000)
+                ->addHook(new \main\models\DataPreloader());
         parent::__construct($req);
     }
 
@@ -138,6 +143,7 @@ class ProxyController extends \controllers\AppBaseController {
         var_dump($data);
         exit;
     }
+
     protected function _enforceMethod($method = 'GET') {
         if (strcasecmp($_SERVER['REQUEST_METHOD'], $method) !== 0) {
             $this->response->addError(new \main\models\ApiError(400, "Invalid request method"));
@@ -157,6 +163,14 @@ class ProxyController extends \controllers\AppBaseController {
     public function display() {
         $this->response->setResult($this->result);
         $this->response->output();
+    }
+
+    public function getLocationInfo() {
+        return $this->geocode;
+    }
+
+    public function getCurrentDate() {
+        return $this->currentDate;
     }
 
 }

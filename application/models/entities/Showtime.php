@@ -15,6 +15,9 @@ namespace models\entities;
  */
 class Showtime extends StandardEntity {
 
+    const TYPE_2D = 'digital';
+    const TYPE_3D = 'digital 3D';
+    const TYPE_IMAX = 'IMAX';
     //put your code here
 
     protected function initRelations() {

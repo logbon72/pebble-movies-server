@@ -18,5 +18,5 @@ namespace models\services;
 interface LocationDistanceCheckI {
     
     //must return distance in metres, -1 if error occurs.
-    public function distanceLookup(\models\Geocode $source, \models\Geocode $destination);
+    public function distanceLookup(\models\GeoLocation $source, \models\GeoLocation $destination);
 }

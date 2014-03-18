@@ -1,0 +1,13 @@
+{
+    "name": "intelworx/pbmovies",
+    "description": "Description of project pbmovies.",
+    "authors": [
+        {
+            "name": "Joseph Orilogbon",
+            "email": "logbon72@gmail.com"
+        }
+    ],
+    "require": {
+        "querypath/querypath": "dev-master"
+    }
+}

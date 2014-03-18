@@ -162,7 +162,7 @@ class LocationService extends \IdeoObject {
         return $this->geocodeCachedManager->getEntity($saveId);
     }
 
-    public function computeDistance(\models\Geocode $source, \models\Geocode $destination) {
+    public function computeDistance(\models\GeoLocation $source, \models\GeoLocation $destination) {
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\LocationDistanceCheckI')) {
                 /* @var $serviceProvier LocationDistanceCheckI*/

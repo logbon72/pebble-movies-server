@@ -28,6 +28,7 @@ class IMDBScraper extends ShowtimeServiceProvider {
     const MAX_METASCORE = 100.0;
 
     protected $currentDate;
+    protected $supportedCountries = array("AR", "AU", "CA", "CL", "DE", "ES", "FR", "IT", "MX", "NZ", "PT", "UK", "US");
 
     public function loadShowtimes(GeocodeCached $geocode, $date = null) {
 
@@ -38,8 +39,8 @@ class IMDBScraper extends ShowtimeServiceProvider {
         );
 
 
-        //$pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
-        $pageData = file_get_contents(__DIR__ . DS . "showtimes_imdb.htm");
+        $pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
+        //$pageData = file_get_contents(__DIR__ . DS . "showtimes_imdb.htm");
         $this->currentDate = $data['date'];
         return $this->extractShowtimes($pageData);
     }
@@ -50,7 +51,6 @@ class IMDBScraper extends ShowtimeServiceProvider {
         //$cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
         $cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
         SystemLogger::debug(__CLASS__, "Found: ", count((array) $cinemasList));
-        $foundTheatre = 0;
         $theatreMovieShowtimes = array();
 
         if ($cinemasList) {

@@ -6,7 +6,7 @@ if (version_compare(PHP_VERSION, '5.4.0') < 0) {
 
 $hostConfigMap = array(
     '/^localhost$/' => "dev",
-    '/^.*testvisacover\.com/' => "dev",
+    '/pbmovies\.orilogbon\.me$/' => "live",
 );
 
 $__host = $_SERVER['HTTP_HOST'];

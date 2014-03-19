@@ -52,7 +52,8 @@ class ProxyController extends \controllers\AppBaseController {
     public function __construct($req) {
         $this->response = new \main\models\Response();
         $req->addHook(new \main\models\RequestLogger(), 1000)
-                ->addHook(new \main\models\DataPreloader());
+        //->addHook(new \main\models\DataPreloader())
+        ;
         parent::__construct($req);
         $this->showtimeService = \models\services\ShowtimeService::instance();
     }
@@ -97,6 +98,14 @@ class ProxyController extends \controllers\AppBaseController {
 
     public function doDefault() {
         $this->_forward('register');
+    }
+
+    public function doPreload() {
+        if ($this->geocode) {
+            $status = $this->showtimeService->loadData($this->geocode, $this->currentDate);
+            \SystemLogger::addLog("PreloadStatus: ", $status);
+        }
+        $this->result['status'] = $status;
     }
 
     public function doRegister() {

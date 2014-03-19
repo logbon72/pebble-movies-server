@@ -34,7 +34,7 @@ class RequestLogger extends \ClientRequestHook {
         if (count(self::$logRecords)) {
             return \models\entitymanagers\UserDeviceReqManager::instance()
                             ->getEntityTable()
-                            ->insert(self::$logRecords);
+                            ->insert(self::$logRecords, false, true);
         }
         return false;
     }

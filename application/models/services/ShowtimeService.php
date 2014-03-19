@@ -145,7 +145,7 @@ class ShowtimeService extends IdeoObject {
                 SystemLogger::warn("Could not create theatre with data: ", $theatreMovieShowtime['theatre']);
             }
         }
-        return $results;
+        return $return;
     }
 
     protected function cacheShowtimes(Theatre $theatre, Movie $movie, $showtimes) {

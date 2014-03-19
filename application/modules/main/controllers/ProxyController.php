@@ -62,8 +62,8 @@ class ProxyController extends \controllers\AppBaseController {
         $token = $this->_request->getQueryParam('token');
         $this->userDevice = \models\entitymanagers\UserDeviceManager::validate($token, $this->requestId);
         $action = $this->_request->getAction();
-        $testMode = !\Application::currentInstance()->isProd() && $this->_request->getQueryParam('skip') == 1;
-        if (!$testMode && !in_array($action, $this->skipAuths)) {
+        $testMode = /* !\Application::currentInstance()->isProd() && */ $this->_request->getQueryParam('skip') == 1;
+        if (!$this->userDevice && !$testMode && !in_array($action, $this->skipAuths)) {
             $this->response->forbidden();
             $this->response->addError(new \main\models\ApiError("FORBIDDEN", "Access denied"));
             $this->display();
@@ -93,7 +93,7 @@ class ProxyController extends \controllers\AppBaseController {
             $this->geocode = $locationService->postalCodeLookup($postalCode, $countryIso, $city);
         }
 
-        $this->currentDate = $this->_request->getQueryParam('date') ? : date("Y-m-d");
+        $this->currentDate = $this->_request->getQueryParam('date') ? date('Y-m-d', strtotime($this->_request->getQueryParam('date'))) : date("Y-m-d");
     }
 
     public function doDefault() {
@@ -104,6 +104,7 @@ class ProxyController extends \controllers\AppBaseController {
         if ($this->geocode) {
             $status = $this->showtimeService->loadData($this->geocode, $this->currentDate);
             \SystemLogger::addLog("PreloadStatus: ", $status);
+            set_time_limit(0);
         }
         $this->result['status'] = $status;
     }

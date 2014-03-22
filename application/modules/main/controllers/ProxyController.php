@@ -147,6 +147,16 @@ class ProxyController extends \controllers\AppBaseController {
         $this->result['theatres'] = $theatres;
     }
 
+    public function doQr() {
+        $showtime_id = (int) $this->_request->getQueryParam('showtime_id');
+        if ($showtime_id) {
+            $this->showtimeService->getRawQrCode($showtime_id);
+        } else {
+            $this->result['data'] = "";
+        }
+        die();
+    }
+
     public function doTheatreMovies() {
         $theatreId = (int) $this->_request->getQueryParam('theatre_id');
         $this->result['theatre_movies'] = $theatreId ? $this->showtimeService->getMovies($this->geocode, $this->currentDate, $theatreId, true) : array();

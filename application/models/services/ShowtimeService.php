@@ -8,6 +8,8 @@
 
 namespace models\services;
 
+include_once LIB_DIR . 'phpqrcode/qrlib.php';
+
 use ComparableObjectSorter;
 use DbTableFunction;
 use DirectoryIterator;
@@ -158,7 +160,7 @@ class ShowtimeService extends IdeoObject {
                         ->insert($showtimes, true, true);
     }
 
-    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id=null, $includeShowtimes=null) {
+    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null) {
         if (!$this->loadData($locationInfo, $currentDate)) {
             return array();
         }
@@ -167,10 +169,10 @@ class ShowtimeService extends IdeoObject {
                 ->setOrderBy('distance_m', 'ASC')
                 ->setGroupBy('t.id');
 
-        if($movie_id){
+        if ($movie_id) {
             $where->where('s.movie_id', $movie_id);
         }
-        
+
         $ids = Theatre::table()->selectFrom('t.id', 't')
                 ->innerJoin(array('tn' => TheatreNearby::table()), 't.id = tn.theatre_id', array('tn.distance_m'))
                 ->innerJoin(array('s' => Showtime::table()), 's.theatre_id = t.id')
@@ -181,14 +183,14 @@ class ShowtimeService extends IdeoObject {
         $theatres = array();
         foreach ($ids as $idRow) {
             $theatre = $this->theatreManager->getEntity($idRow['id']);
-            /*@var $theatre Theatre*/
+            /* @var $theatre Theatre */
             if ($theatre) {
                 $theatreArr = $theatre->toArray(Theatre::TO_ARRAY_MVA, 1, array('id', 'name', 'address'));
                 $theatreArr['distance_m'] = $idRow['distance_m'];
-                if($includeShowtimes){
+                if ($includeShowtimes) {
                     $theatreArr['showtimes'] = [];
-                    $showtimes=  $theatre->getShowtimes($movie_id, $currentDate);
-                    foreach ($showtimes as $showtime){
+                    $showtimes = $theatre->getShowtimes($movie_id, $currentDate);
+                    foreach ($showtimes as $showtime) {
                         $theatreArr['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
                     }
                 }
@@ -269,6 +271,16 @@ class ShowtimeService extends IdeoObject {
                 $object = date("c", strtotime($object));
             }
         }
+    }
+
+    public function getRawQrCode($showtime_id) {
+        $showtime = $this->showtimeManager->getEntity($showtime_id);
+
+        if ($showtime && $showtime->url) {
+            $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+            \QRcode::png($l, false, QR_ECLEVEL_L, 3, 1);
+        }
+        return null;
     }
 
 }

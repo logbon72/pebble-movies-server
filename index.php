@@ -1,8 +1,9 @@
 <?php
 
 require_once 'init.php';
-define('UPLOADS_DIR', realpath('uploads') . DIRECTORY_SEPARATOR);
- 
+
+define('CACHE_DIR', __DIR__ . '/cache');
+
 ini_set('memory_limit', "256M");
 
 require_once APP_DIR . "library/framework/Application.php";

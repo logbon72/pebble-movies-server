@@ -149,12 +149,12 @@ class ProxyController extends \controllers\AppBaseController {
 
     public function doQr() {
         $showtime_id = (int) $this->_request->getQueryParam('showtime_id');
+        header("Content-Type: application/octet-stream");
+        $data = "";
         if ($showtime_id) {
-            $this->showtimeService->getRawQrCode($showtime_id);
-        } else {
-            $this->result['data'] = "";
+            $data = $this->showtimeService->getRawQrCode($showtime_id);
         }
-        die();
+        die($data);
     }
 
     public function doTheatreMovies() {

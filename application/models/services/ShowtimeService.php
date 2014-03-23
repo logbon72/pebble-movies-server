@@ -273,12 +273,38 @@ class ShowtimeService extends IdeoObject {
         }
     }
 
+    public function checkCache($showtime_id) {
+        if (!is_dir(CACHE_DIR) && !mkdir(CACHE_DIR, 0700)) {
+            return null;
+        }
+        $fileName = CACHE_DIR . "/" . $this->cacheName($showtime_id);
+        if (file_exists($fileName)) {
+            return file_get_contents($fileName);
+        }
+        return null;
+    }
+
+    private function cacheName($id) {
+        return "qrcode.{$id}.pbi";
+    }
+
     public function getRawQrCode($showtime_id) {
         $showtime = $this->showtimeManager->getEntity($showtime_id);
 
         if ($showtime && $showtime->url) {
+            $cached = $this->checkCache($showtime_id);
+            if($cached){
+                return $cached;
+            }
+            
             $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
-            \QRcode::png($l, false, QR_ECLEVEL_L, 3, 1);
+            $filename = tempnam(sys_get_temp_dir(), "qrcode_");
+            \QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
+            $converter = new \ImageConverter($filename);
+            $cacheFile = $this->cacheName($showtime_id);
+            if($converter->convertToPbi($cacheFile)){
+                return file_get_contents($cacheFile);
+            }
         }
         return null;
     }

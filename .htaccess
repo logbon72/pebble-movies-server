@@ -4,6 +4,12 @@ SetEnv DEFAULT_CONFIG live
 #un-coment when there's need to put on maintenance mode.
 #RewriteRule ^(.*)$ maintenance.html [L]
 
+RewriteRule ^(proxy/*) /$1 [env=API:true]
+Header set Access-Control-Allow-Origin * env=REDIRECT_API
+Header set Access-Control-Allow-Methods POST,GET,OPTIONS env=REDIRECT_API
+Header set Access-Control-Allow-Headers X-Authorization,X-Requested-With,Authorization env=REDIRECT_API
+Header set Access-Control-Allow-Credentials true env=REDIRECT_API
+
 #RewriteRule ^(.*)$ maintenance.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -29,6 +35,6 @@ deny from all
 
 SetOutputFilter DEFLATE
 #DeflateFilterNote ratio
-SetEnvIfNoCase Request_URI .(?:gif|jpe?g|png)$ no-gzip dont-vary
+SetEnvIfNoCase Request_URI .(?:gif|jpe?g|png|qr)$ no-gzip dont-vary
 SetEnvIfNoCase Request_URI .(?:exe|t?gz|zip|bz2|sit|rar|docx|doc|rtf)$ no-gzip dont-vary
 SetEnvIfNoCase Request_URI .pdf$ no-gzip dont-vary

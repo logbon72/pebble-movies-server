@@ -20,7 +20,7 @@ class ProxyController extends \controllers\AppBaseController {
      * @var \models\entities\UserDevice
      */
     protected $userDevice;
-    protected $skipAuths = array('register');
+    protected $skipAuths = array('register', 'settings');
     protected $requestId;
 
     /**
@@ -143,7 +143,7 @@ class ProxyController extends \controllers\AppBaseController {
     }
 
     public function doTheatres() {
-        $theatres = $this->showtimeService->getTheatres($this->geocode, $this->currentDate);
+        $theatres = $this->geocode ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate) : array();
         $this->result['theatres'] = $theatres;
     }
 
@@ -157,9 +157,16 @@ class ProxyController extends \controllers\AppBaseController {
         die($data);
     }
 
+    public function doSettings(){
+        $this->_view->availableCountries = $this->showtimeService->getSupportedCountries();
+        $this->_view->geocode = $this->geocode;
+        parent::display();
+        exit;
+    }
+
     public function doTheatreMovies() {
         $theatreId = (int) $this->_request->getQueryParam('theatre_id');
-        $this->result['theatre_movies'] = $theatreId ? $this->showtimeService->getMovies($this->geocode, $this->currentDate, $theatreId, true) : array();
+        $this->result['theatre_movies'] = $theatreId && $this->geocode ? $this->showtimeService->getMovies($this->geocode, $this->currentDate, $theatreId, true) : array();
     }
 
     public function doTheatreMovieShowtimes() {
@@ -167,12 +174,13 @@ class ProxyController extends \controllers\AppBaseController {
     }
 
     public function doMovies() {
-        $this->result['movies'] = $this->showtimeService->getMovies($this->geocode, $this->currentDate);
+        $this->result['movies'] = $this->geocode ? $this->showtimeService->getMovies($this->geocode, $this->currentDate) : array();
     }
 
     public function doMovieTheatres() {
         $movieId = (int) $this->_request->getQueryParam('movie_id');
-        $this->result['movie_theatres'] = $movieId ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate, $movieId, true) : array();
+        
+        $this->result['movie_theatres'] = $movieId && $this->geocode ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate, $movieId, true) : array();
     }
 
     public function doTest() {

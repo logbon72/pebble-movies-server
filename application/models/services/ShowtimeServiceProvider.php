@@ -47,5 +47,9 @@ abstract class ShowtimeServiceProvider extends ServiceProvider {
 
         return in_array($locationInfo->country_iso, $this->supportedCountries);
     }
+    
+    public function getSupportedCountries() {
+        return $this->supportedCountries;
+    }
 
 }

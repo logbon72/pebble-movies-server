@@ -15,6 +15,7 @@ namespace models\entities;
  */
 class Movie extends StandardEntity {
 
+    const UPDATE_FREQUENCY = 43200;
 
     protected function initRelations() {
         $this->setOneToMany('showtimes', Showtime::manager());
@@ -23,13 +24,17 @@ class Movie extends StandardEntity {
     public static function getOrCreate($movieData) {
         $manager = static::manager();
         $movie = $manager->getEntity($movieData['title'], 'title', null, true);
-        if($movie){
+        if ($movie) {
+            if((time() - strtotime($movie->last_updated)) > self::UPDATE_FREQUENCY){
+                $movieData['last_updated'] = new \DbTableFunction("now()");
+                $movie->update($movieData, 'id');
+            }
             return $movie;
         }
-        
+
         $movieId = $manager->createEntity($movieData)
-                        ->save();
-        
+                ->save();
+
         return $manager->getEntity($movieId);
     }
 
@@ -40,22 +45,23 @@ class Movie extends StandardEntity {
      * @param \DbTableFunction $order
      * @return Showtime[]
      */
-    public function getShowtimes($theatre_id=null, $date=null, $order=null){
+    public function getShowtimes($theatre_id = null, $date = null, $order = null) {
         $showtimesWhere = new \DbTableWhere();
-        if($theatre_id){
+        if ($theatre_id) {
             $showtimesWhere->where('theatre_id', $theatre_id);
         }
-        
-        if($date){
+
+        if ($date) {
             $showtimesWhere->where('show_date', $date);
         }
 
-        if(!$order){
+        if (!$order) {
             $order = new \DbTableFunction('type,show_date,show_time');
         }
         $showtimesWhere->setOrderBy($order)
-                    ->where('movie_id', $this->_data['id']);
+                ->where('movie_id', $this->_data['id']);
         //echo $showtimesWhere; exit;
         return Showtime::manager()->getEntitiesWhere($showtimesWhere);
     }
+
 }

@@ -293,20 +293,39 @@ class ShowtimeService extends IdeoObject {
 
         if ($showtime && $showtime->url) {
             $cached = $this->checkCache($showtime_id);
-            if($cached){
+            if ($cached) {
                 return $cached;
             }
-            
+
             $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
             $filename = tempnam(sys_get_temp_dir(), "qrcode_");
             \QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
             $converter = new \ImageConverter($filename);
             $cacheFile = $this->cacheName($showtime_id);
-            if($converter->convertToPbi($cacheFile)){
+            if ($converter->convertToPbi($cacheFile)) {
                 return file_get_contents($cacheFile);
             }
         }
         return null;
+    }
+
+    public function getSupportedCountries() {
+        $results = array();
+        foreach ($this->serviceProviderList as $serviceProvider) {
+            $supported = $serviceProvider->getSupportedCountries();
+            if (empty($supported)) {
+                return LookupResult::$ISO_TABLE;
+            } else {
+                $results = array_merge($results, $supported);
+            }
+        }
+
+        sort($results);
+        $countryTables = array();
+        foreach ($results as $country) {
+            $countryTables[$country] = LookupResult::$ISO_TABLE[$country];
+        }
+        return $countryTables;
     }
 
 }

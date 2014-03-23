@@ -14,5 +14,8 @@ namespace controllers;
  * @author intelWorX
  */
 class AppBaseController extends \BaseController{
-    //put your code here
+    
+    public function doDefault($param) {
+        $this->_request->redirect("http://pblweb.com/appstore/532eadd24e66a6b2a4000137/");
+    }
 }

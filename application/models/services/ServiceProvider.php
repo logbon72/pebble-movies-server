@@ -59,9 +59,10 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
         );
 
         $streamContext = stream_context_create($contextOpt);
+        \SystemLogger::info(get_class($this),":" ,__METHOD__,"URL: ", $url);
         $result = file_get_contents($url, false, $streamContext);
         if($logResponse){
-            \SystemLogger::info("Call to ", $url, " returned: ", $result);
+            \SystemLogger::info("Call returned: ", $result);
         }
         return $result;
     }

@@ -285,7 +285,7 @@ class ShowtimeService extends IdeoObject {
     }
 
     private function cacheName($id) {
-        return "qrcode.{$id}.pbi";
+        return CACHE_DIR . "/qrcode.{$id}.pbi";
     }
 
     public function getRawQrCode($showtime_id) {

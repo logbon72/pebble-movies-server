@@ -27,7 +27,7 @@ class Movie extends StandardEntity {
         if ($movie) {
             if((time() - strtotime($movie->last_updated)) > self::UPDATE_FREQUENCY){
                 $movieData['last_updated'] = new \DbTableFunction("now()");
-                $movie->update($movieData, 'id');
+                $movie->update(array_filter($movieData), 'id');
             }
             return $movie;
         }

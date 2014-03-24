@@ -162,6 +162,7 @@ class ProxyController extends \controllers\AppBaseController {
     public function doSettings(){
         $this->_view->availableCountries = $this->showtimeService->getSupportedCountries();
         $this->_view->geocode = $this->geocode;
+        $this->_view->hasUpdate = doubleval(\SystemConfig::getInstance()->system['current_version']) > doubleval($this->_request->getQueryParam('version'));
         parent::display();
         exit;
     }

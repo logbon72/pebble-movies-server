@@ -12,10 +12,15 @@
         <body>
             <div data-role="page" id="main">
                 <div data-role="header" class="jqm-header">
-                    <h1>Pebble Movies Settings</h1>
+                    <h1>Settings</h1>
                 </div>
 
                 <div data-role="content">
+                    {if $hasUpdate}
+                        <div style="text-align: center; color: #28a4c9; padding: 5px; border: solid 1px #269abc; border-radius: 3px; margin: 5px 0;">
+                            A newer version of this app is available. Visit Pebble App store to update
+                        </div>
+                    {/if}
                     {*var SETTING_DEFAULT_POSTAL_CODE = "PostalCode";
                     var SETTING_DEFAULT_CITY = "DefaultCity";
                     var SETTING_DEFAULT_COUNTRY = "DefaultCountry";
@@ -61,8 +66,8 @@
                     <div data-role="fieldcontain">
                         <label for="DefaultUnit">Distance Unit</label>
                         <select name="DefaultUnit" id="DefaultUnit" data-role="slider" style="width: 7em;" class="setting">
-                            <option value="km">Km</option>
-                            <option value="mi">Miles</option>
+                            {$units = ["km" => "Km", "mi"=>"Miles"]}
+                            {html_options options=$units selected=$smarty.request.unit}
                         </select>
                     </div>
                 </div>
@@ -81,7 +86,7 @@
             function saveOptions() {
                 var options = {}
                 $('.setting').each(function(i, el) {
-                    if(el.id && el.id.length){
+                    if (el.id && el.id.length) {
                         options[el.id] = $(el).val();
                     }
                 });

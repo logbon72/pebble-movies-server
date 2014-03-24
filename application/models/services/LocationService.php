@@ -99,13 +99,13 @@ class LocationService extends \IdeoObject {
      * @param type $address
      * @return null|\models\entities\GeocodeCached
      */
-    public function addressLookup($address) {
+    public function addressLookup($address, $extraData=array()) {
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\AddressLookupI')) {
                 /* @var $serviceProvier AddressLookupI */
                 $lookupResult = $serviceProvier->addressLookup($address);
                 if ($lookupResult) {
-                    return $this->cacheLookup($lookupResult, round($lookupResult->getFoundLong(), self::GEOCODE_PRECISION), round($lookupResult->getFoundLat(), self::GEOCODE_PRECISION));
+                    return $this->cacheLookup($lookupResult, round($lookupResult->getFoundLong(), self::GEOCODE_PRECISION), round($lookupResult->getFoundLat(), self::GEOCODE_PRECISION), $extraData);
                 } else {
                     if (($lastError = $serviceProvier->getLastError(true))) {
                         \SystemLogger::warn("Error... {$lastError->getMessage()} TYPE: {$lastError->getType()}");
@@ -128,21 +128,24 @@ class LocationService extends \IdeoObject {
      */
     public function postalCodeLookup($postalCode, $countryIso, $city = null) {
         $lookupWhere = new \DbTableWhere();
+        $countryIso = LookupResult::remapIso($countryIso);
         $lookupWhere->where('country_iso', $countryIso);
         if ($postalCode) {
             $lookupWhere->where('postal_code', $postalCode);
+        } elseif ($city) {
+            $lookupWhere->where('city', $city);
         }
-
-        if ($city) {
-            $lookupWhere->where('country_iso', $countryIso);
-        }
-
+        //var_dump($lookupWhere);exit;
         $cached = $this->geocodeCachedManager->getEntityWhere($lookupWhere);
         if ($cached) {
             return $cached;
         }
         $address = preg_replace('/\s+/', ' ', "{$postalCode} {$city} {$countryIso}");
-        return $this->addressLookup(trim($address));
+        return $this->addressLookup(trim($address), array(
+                    'postal_code' => $postalCode,
+                    'city' => $city,
+                    'country_iso' => $countryIso
+        ));
     }
 
     /**
@@ -152,20 +155,20 @@ class LocationService extends \IdeoObject {
      * @param type $preciseLat
      * @return \models\entities\GeocodeCached
      */
-    protected function cacheLookup(LookupResult $lookupResult, $preciseLong, $preciseLat) {
+    protected function cacheLookup(LookupResult $lookupResult, $preciseLong, $preciseLat, $extraData = array()) {
         $data = array(
             'longitude' => $preciseLong,
             'latitude' => $preciseLat,
-                ) + $lookupResult->getCachingData();
+                ) + $lookupResult->getCachingData($extraData);
 
-        $saveId = $this->geocodeCachedManager->createEntity($data)->save();
+        $saveId = $this->geocodeCachedManager->createEntity($data)->save(true);
         return $this->geocodeCachedManager->getEntity($saveId);
     }
 
     public function computeDistance(\models\GeoLocation $source, \models\GeoLocation $destination) {
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\LocationDistanceCheckI')) {
-                /* @var $serviceProvier LocationDistanceCheckI*/
+                /* @var $serviceProvier LocationDistanceCheckI */
                 $distance = $serviceProvier->distanceLookup($source, $destination);
                 if ($distance >= 0) {
                     return $distance;

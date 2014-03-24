@@ -273,8 +273,10 @@ class LookupResult extends \IdeoObject {
     protected $country;
     protected $foundLong;
     protected $foundLat;
-
 //protected $timezone;
+    public static $REMAP = array(
+        'UK' => "GB"
+    );
 
     public function __construct($postalCode, $countryIso, $foundLong, $foundLat, $city = NULL, $country = null) {
         $this->postalCode = $postalCode;
@@ -286,8 +288,16 @@ class LookupResult extends \IdeoObject {
         $this->setSynthesizeFields(true);
     }
 
-    public function getCachingData() {
-        return array(
+    public static function remapIso($code) {
+        $code = strtoupper(trim($code));
+        if (array_key_exists($code, self::$REMAP)) {
+            return self::$REMAP[$code];
+        }
+        return $code;
+    }
+
+    public function getCachingData($extraData = array()) {
+        $initial = array(
             'postal_code' => $this->postalCode,
             'city' => $this->city,
             'country_iso' => $this->countryIso,
@@ -295,6 +305,7 @@ class LookupResult extends \IdeoObject {
             'found_longitude' => $this->foundLong,
             'found_latitude' => $this->foundLat,
         );
+        return array_merge($extraData, array_filter($initial));
     }
 
 }

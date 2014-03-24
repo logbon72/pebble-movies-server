@@ -92,7 +92,9 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
         $address = $resultProp['address'];
         $geocode = $resultProp['geocodePoints'][0]['coordinates'];
         $countryIso = array_search($address['countryRegion'], \models\services\LookupResult::$ISO_TABLE);
-
+        if($countryIso){
+            $countryIso = \models\services\LookupResult::remapIso($countryIso);
+        }
         return new \models\services\LookupResult($address['postalCode'], $countryIso, $geocode[1], $geocode[0], $resultProp['adminDistrict'], $address['countryRegion']);
     }
 

@@ -2,3 +2,5 @@
 /application/system.log
 /application/models/services/showtimeproviders/showtimes_imdb.htm
 /application/models/services/showtimeproviders/showtimes_imdb_files
+/cache/
+*.tpl.php

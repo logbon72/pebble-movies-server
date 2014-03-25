@@ -160,7 +160,56 @@ class ShowtimeService extends IdeoObject {
                         ->insert($showtimes, true, true);
     }
 
-    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null) {
+    public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null) {
+        if (!$this->loadData($locationInfo, $currentDate)) {
+            return array();
+        }
+
+        $where = $locationInfo->getQueryWhere()
+                ->where('s.show_date', $currentDate)
+        ;
+
+        if ($theatre_id) {
+            $where->where('s.theatre_id', $theatre_id);
+        }
+
+        if ($movie_id) {
+            $where->where('s.movie_id', $movie_id);
+        }
+
+        $idsIn = Showtime::table()->selectFrom(array('s.id'), 's')
+                ->innerJoin(array('tn' => TheatreNearby::table()), "tn.theatre_id=s.theatre_id")
+                ->where($where)
+                ->generateSQL()
+        ;
+        //array('id', 'show_time', 'show_date', 'url');
+        $showtimeWhere = (new \DbTableWhere())
+                ->whereInSql('id', $idsIn)
+                ->setOrderBy("theatre_id")
+                ->setOrderBy("movie_id")
+                ->setOrderBy("show_date")
+                ->setOrderBy("show_time")
+                ->setOrderBy("type");
+
+//showtimes
+        $showtimes = Showtime::manager()
+                ->getEntitiesWhere($showtimeWhere);
+
+        $showtimesResult = array();
+        foreach ($showtimes as $showtime) {
+            $key = "{$showtime->theatre_id}.{$showtime->movie_id}";
+            if (!array_key_exists($key, $showtimesResult)) {
+                $showtimesResult[$key] = array();
+            }
+            $showtimeArr = $showtime->toArray(0, 1, array('id', 'show_time', 'type'));
+            $showtimeArr['link'] = strlen($showtime->url) > 0;
+            $showtimesResult[$key][] = $showtimeArr;
+        }
+
+        return $showtimesResult;
+    }
+
+    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null, $includeMovieIds = false) {
         if (!$this->loadData($locationInfo, $currentDate)) {
             return array();
         }
@@ -175,7 +224,7 @@ class ShowtimeService extends IdeoObject {
 
         $ids = Theatre::table()->selectFrom('t.id', 't')
                 ->innerJoin(array('tn' => TheatreNearby::table()), 't.id = tn.theatre_id', array('tn.distance_m'))
-                ->innerJoin(array('s' => Showtime::table()), 's.theatre_id = t.id')
+                ->innerJoin(array('s' => Showtime::table()), 's.theatre_id = t.id', array(new DbTableFunction("GROUP_CONCAT(DISTINCT s.movie_id) AS movies")))
                 ->where($where)
                 ->query()
         ;
@@ -194,14 +243,19 @@ class ShowtimeService extends IdeoObject {
                         $theatreArr['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
                     }
                 }
+
+                if ($includeMovieIds) {
+                    $theatreArr['movies'] = explode(",", $idRow['movies']);
+                }
                 $theatres[] = $theatreArr;
             }
         }
 
+        $this->_filterObject($theatres);
         return $theatres;
     }
 
-    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false) {
+    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false) {
         if (!$this->loadData($locationInfo, $currentDate)) {
             return array();
         }
@@ -215,13 +269,21 @@ class ShowtimeService extends IdeoObject {
 
         $idsQuery = Movie::table()->selectFrom('m.id', 'm')
                 ->innerJoin(array('s' => Showtime::table()), 's.movie_id = m.id')
-                ->innerJoin(array('tn' => TheatreNearby::table()), 's.theatre_id = tn.theatre_id')
-                ->where($where)
-                ->generateSQL()
+                ->innerJoin(array('tn' => TheatreNearby::table()), 's.theatre_id = tn.theatre_id', array(new DbTableFunction("GROUP_CONCAT(tn.theatre_id ORDER BY distance_m ASC) as theatres")))
+                ->where($where->setGroupBy("m.id"))
+                //->generateSQL()
+                ->query()
         ;
 
+        $ids = array();
+        $theatres = array();
+        foreach ($idsQuery as $result) {
+            $ids[] = $result['id'];
+            $theatres[$result['id']] = explode(",", $result['theatres']);
+        }
+
         $moviesWhere = (new \DbTableWhere())
-                ->whereInSql('id', $idsQuery)
+                ->whereInArray('id', $ids)
                 ->setOrderBy('title');
 
         $movieList = Movie::manager()
@@ -233,16 +295,23 @@ class ShowtimeService extends IdeoObject {
         foreach ($movieList as $movieInList) {
             /* @var $movieInList Movie */
             $movie = $movieInList->toArray();
-            $this->_filterObject($movie);
+            //$this->_filterObject($movie);
+            //add showtimes ?
             if ($includeShowtimes) {
                 $movie['showtimes'] = array();
                 foreach ($movieInList->getShowtimes($theatre_id, $currentDate) as $showtime) {
                     $movie['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
                 }
             }
+            
+
+            if ($includeTheatreIds) {
+                $movie['theatres'] = $theatres[$movieInList->id];
+            }
             $movies[] = $movie;
         }
 
+        $this->_filterObject($movies);
         return $movies;
     }
 

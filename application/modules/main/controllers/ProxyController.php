@@ -106,9 +106,23 @@ class ProxyController extends \controllers\AppBaseController {
             $status = $this->showtimeService->loadData($this->geocode, $this->currentDate);
             \SystemLogger::addLog("PreloadStatus: ", $status);
             set_time_limit(0);
+            
         }
         $this->result['status'] = $status;
         $this->result['version'] = $version;
+    }
+    
+    public function doPreload11() {
+        $this->doPreload();
+        if($this->result['status']){
+            //load movies:
+            $data = array(
+                'movies' => $this->showtimeService->getMovies($this->geocode, $this->currentDate, 0, false, true),
+                'theatres' => $this->showtimeService->getTheatres($this->geocode, $this->currentDate, 0, false, true),
+                'showtimes' => $this->showtimeService->getShowtimes($this->geocode, $this->currentDate, 0, 0)
+            );
+        }
+        $this->result['data'] = $data;
     }
 
     public function doRegister() {

@@ -275,7 +275,7 @@ class ShowtimeService extends IdeoObject {
 
         $idsQuery = Movie::table()->selectFrom('m.id', 'm')
                 ->innerJoin(array('s' => Showtime::table()), 's.movie_id = m.id')
-                ->innerJoin(array('tn' => TheatreNearby::table()), 's.theatre_id = tn.theatre_id', array(new DbTableFunction("GROUP_CONCAT(tn.theatre_id ORDER BY distance_m ASC) as theatres")))
+                ->innerJoin(array('tn' => TheatreNearby::table()), 's.theatre_id = tn.theatre_id', array(new DbTableFunction("GROUP_CONCAT(DISTINCT tn.theatre_id ORDER BY distance_m ASC) as theatres")))
                 ->where($where->setGroupBy("m.id"))
                 //->generateSQL()
                 ->query()

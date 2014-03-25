@@ -9,6 +9,7 @@
 namespace models\services;
 
 include_once LIB_DIR . 'phpqrcode/qrlib.php';
+include_once LIB_DIR . 'bitlyapi/Bitly.php';
 
 use ComparableObjectSorter;
 use DbTableFunction;
@@ -57,6 +58,11 @@ class ShowtimeService extends IdeoObject {
      */
     protected $theatreNearByManager;
 
+    /**
+     *
+     * @var \Bitly
+     */
+    protected $bitly;
     /**
      *
      * @var ShowtimeServiceProvider[]
@@ -366,8 +372,16 @@ class ShowtimeService extends IdeoObject {
                 return $cached;
             }
 
-            $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+            //$l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+            $shorten = $this->getBitly()->shorten($showtime->url, 'j.mp');
+            if($shorten){
+                $l = $shorten['url'];
+            }else{
+                $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+            }
+            
             $filename = tempnam(sys_get_temp_dir(), "qrcode_");
+            //header("Content-Type: image/png");
             \QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
             $converter = new \ImageConverter($filename);
             $cacheFile = $this->cacheName($showtime_id);
@@ -397,4 +411,11 @@ class ShowtimeService extends IdeoObject {
         return $countryTables;
     }
 
+    public function getBitly() {
+        if(!$this->bitly){
+            $bitlyConfig = \SystemConfig::getInstance()->bitly;
+            $this->bitly = new \Bitly($bitlyConfig['api_key'], $bitlyConfig['api_secret'], $bitlyConfig['token']);
+        }
+        return $this->bitly;
+    }
 }

@@ -6,6 +6,8 @@ if (version_compare(PHP_VERSION, '5.4.0') < 0) {
 
 $hostConfigMap = array(
     '/^localhost$/' => "dev",
+    '/^jto$/' => "test",
+    '/^192\.169\.42\.186$/' => "test",
     '/pbmovies\.orilogbon\.me$/' => "live",
 );
 

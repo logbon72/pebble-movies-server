@@ -139,6 +139,7 @@ class ShowtimeService extends IdeoObject {
 
     protected function cacheResult($results, $locationInfo) {
         //throw new Exception("Work in progress");
+        //var_dump($results);exit;
         $return = 0;
         foreach ($results as $theatreMovieShowtime) {
             $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre'], $locationInfo);

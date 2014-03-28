@@ -35,12 +35,12 @@ class IMDBScraper extends ShowtimeServiceProvider {
         $data = array(
             'countryIso' => $geocode->country_iso,
             'date' => $date ? : date('Y-m-d'),
-            'postalCode' => $geocode->postal_code,
+            'postalCode' => urlencode($geocode->postal_code),
         );
 
 
         $pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
-        //$pageData = file_get_contents(__DIR__ . DS . "showtimes_imdb.htm");
+        //$pageData = file_get_contents(__DIR__ . DS . "showtimes.htm");
         $this->currentDate = $data['date'];
         return $this->extractShowtimes($pageData);
     }
@@ -138,12 +138,11 @@ class IMDBScraper extends ShowtimeServiceProvider {
 
         $index = 0;
         $times = array();
-        //var_dump(count($showtimesDomList));exit;
         foreach ($showtimesDomList as $showtimesDom) {
             $getTicketsLink = $showtimesDom->find('a')->first();
             $showtimeTypeDom = new DOMQuery($movieDom->find('h5.li_group')->get($index++));
             $showtimeType = $showtimeTypeDom ? $this->getShowtimeType(trim($showtimeTypeDom->text(), ' :\r\n')) : 'digital';
-            if ($getTicketsLink) {
+            if ($getTicketsLink->length > 0) {
                 $timeList = explode('|', $getTicketsLink->attr('data-times'));
                 $link = $getTicketsLink->attr('href');
                 foreach ($timeList as $movieTime) {

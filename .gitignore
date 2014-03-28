@@ -4,3 +4,7 @@
 /application/models/services/showtimeproviders/showtimes_imdb_files
 /cache/
 *.tpl.php
+/application/models/services/showtimeproviders/showtimes.htm
+/application/models/services/showtimeproviders/showtimes_files
+/application/models/services/showtimeproviders/showtimes_ny_files
+/application/models/services/showtimeproviders/showtimes_ny.htm

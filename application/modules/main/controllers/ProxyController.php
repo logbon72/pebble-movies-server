@@ -114,6 +114,7 @@ class ProxyController extends \controllers\AppBaseController {
     
     public function doPreload11() {
         $this->doPreload();
+        $data = array();
         if($this->result['status']){
             //load movies:
             $data = array(

@@ -68,6 +68,8 @@ class ShowtimeService extends IdeoObject {
      * @var ShowtimeServiceProvider[]
      */
     protected $serviceProviderList = array();
+    
+    const THEATRE_LIMIT = 15;
 
     private function __construct() {
         //load providers

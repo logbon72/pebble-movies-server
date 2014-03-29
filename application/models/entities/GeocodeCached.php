@@ -19,7 +19,7 @@ class GeocodeCached extends StandardEntity {
         $queryWhere = new \DbTableWhere();
         $queryWhere->where('country_iso', $this->_data['country_iso']);
         if ($this->_data['postal_code']) {
-            $queryWhere->where('postal_code', $this->_data['postal_code']);
+            $queryWhere->where(new \DbTableFunction("REPLACE(postal_code, ' ', '')"), str_replace(' ', '', $this->_data['postal_code']));
         } else {
             $queryWhere->where('city', $this->_data['city']);
         }

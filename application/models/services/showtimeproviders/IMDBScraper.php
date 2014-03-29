@@ -10,6 +10,7 @@ namespace models\services\showtimeproviders;
 
 use models\entities\GeocodeCached;
 use models\entities\Showtime;
+use models\services\ShowtimeService;
 use models\services\ShowtimeServiceProvider;
 use QueryPath;
 use QueryPath\DOMQuery;
@@ -23,7 +24,7 @@ use SystemLogger;
 class IMDBScraper extends ShowtimeServiceProvider {
 
     const SHOWTIMES_PAGE = 'http://www.imdb.com/showtimes/{countryIso}/{postalCode}/{date}';
-    const THEATRE_LIMIT = 15;
+    //const THEATRE_LIMIT = 15;
     const MAX_RATING = 10.0;
     const MAX_METASCORE = 100.0;
 
@@ -40,7 +41,8 @@ class IMDBScraper extends ShowtimeServiceProvider {
 
 
         $pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
-        //$pageData = file_get_contents(__DIR__ . DS . "showtimes.htm");
+        //$pageData = file_get_contents(__DIR__ . DS . "showtimes.html");
+        //file_put_contents("data_".microtime(true).".html", $pageData);
         $this->currentDate = $data['date'];
         return $this->extractShowtimes($pageData);
     }
@@ -49,16 +51,17 @@ class IMDBScraper extends ShowtimeServiceProvider {
         $imdbPage = QueryPath::withHTML($pageData);
         SystemLogger::debug(__CLASS__, "Extracting theatres...");
         //$cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
-        $cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
+        $cinemasList = $imdbPage->find("#cinemas-at-list > .list_item");
         SystemLogger::debug(__CLASS__, "Found: ", count((array) $cinemasList));
         $theatreMovieShowtimes = array();
 
         if ($cinemasList) {
-            for ($i = 0; ($i <= self::THEATRE_LIMIT && $i < $cinemasList->count()); $i++) {
+            for ($i = 0; ($i < ShowtimeService::THEATRE_LIMIT && $i < $cinemasList->count()); $i++) {
                 /* @var $cinemaDiv DOMQuery */
                 $cinemaDiv = new DOMQuery($cinemasList->get($i));
                 $theatreData = array();
                 $theatreTitle = $cinemaDiv->find('h3')->first();
+                SystemLogger::info("{$i}. Theatre: ", $theatreTitle->text());
                 if (!$theatreTitle) {
                     SystemLogger::debug(__CLASS__, "No theatre found");
                     continue;

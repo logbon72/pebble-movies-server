@@ -23,9 +23,12 @@ class Movie extends StandardEntity {
 
     public static function getOrCreate($movieData) {
         $manager = static::manager();
-        $movie = $manager->getEntity($movieData['title'], 'title', null, true);
+        $entityWhere = (new \DbTableWhere())
+                ->where('title', $movieData['title'])
+                ->where('rated', trim($movieData['rated']));
+        $movie = $manager->getEntityWhere($entityWhere);
         if ($movie) {
-            if((time() - strtotime($movie->last_updated)) > self::UPDATE_FREQUENCY){
+            if ((time() - strtotime($movie->last_updated)) > self::UPDATE_FREQUENCY) {
                 $movieData['last_updated'] = new \DbTableFunction("now()");
                 $movie->update(array_filter($movieData), 'id');
             }

@@ -130,8 +130,9 @@ class LocationService extends \IdeoObject {
         $lookupWhere = new \DbTableWhere();
         $countryIso = LookupResult::remapIso($countryIso);
         $lookupWhere->where('country_iso', $countryIso);
+        $postalCode =  str_replace(' ', '', $postalCode);
         if ($postalCode) {
-            $lookupWhere->where('postal_code', $postalCode);
+            $lookupWhere->where(new \DbTableFunction("REPLACE(postal_code, ' ', '')"), $postalCode);
         } elseif ($city) {
             $lookupWhere->where('city', $city);
         }

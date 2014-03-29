@@ -15,7 +15,17 @@ namespace controllers;
  */
 class AppBaseController extends \BaseController{
     
-    public function doDefault($param) {
+    public function doDefault() {
         $this->_request->redirect("http://pblweb.com/appstore/532eadd24e66a6b2a4000137/");
     }
+//    
+//    public function doAny() {
+//        $movie = \models\entities\Movie::getOrCreate(array(
+//            'title' => "Le passé",
+//            'rated'=> null,
+//            'critic_rating' => 0.85,
+//            'runtime' => 130
+//        ));
+//        var_dump($movie->toArray());exit;
+//    }
 }

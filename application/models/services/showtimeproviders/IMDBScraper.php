@@ -86,6 +86,7 @@ class IMDBScraper extends ShowtimeServiceProvider {
                 );
             }
         }
+        //var_dump($theatreMovieShowtimes);exit;
         return $theatreMovieShowtimes;
     }
 
@@ -158,14 +159,15 @@ class IMDBScraper extends ShowtimeServiceProvider {
                 }
             } else {
                 $showtimes = trim(preg_replace('/\s+/', ' ', $showtimesDom->text()));
-                $showtimesArr = preg_split('/[\|\s]+/', $showtimes);
+                $showtimesArr = preg_split('/(\|\s*)+/', $showtimes);
                 $lastAp = 'am';
                 foreach ($showtimesArr as $timeThing) {
-                    if (preg_match('/am|pm/', $timeThing)) {
+                    if (preg_match('/(am)|(pm)/i', $timeThing)) {
                         $tmp = explode(' ', $timeThing);
                         $lastAp = $tmp[1] ? : $lastAp;
                         $timeThing = $tmp[0];
                     }
+                    
                     $times[] = array(
                         'show_date' => $this->currentDate,
                         'show_time' => date('H:i:s', strtotime("{$timeThing} {$lastAp}")),

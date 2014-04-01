@@ -22,11 +22,11 @@ class Movie extends StandardEntity {
     }
 
     public static function getOrCreate($movieData) {
-        $manager = static::manager();
+        $manager = static::manager();        
         $entityWhere = (new \DbTableWhere())
                 ->where('title', $movieData['title']);
         
-        if ($movieData['rated']) {
+        if (trim($movieData['rated'])) {
             $entityWhere->where('rated', trim($movieData['rated']));
         }
         

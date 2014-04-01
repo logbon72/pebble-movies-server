@@ -21,8 +21,8 @@ class GeoLocation extends \IdeoObject {
     protected $address;
 
     public function __construct($latitude, $longitude, $address = null) {
-        $this->longitude = $latitude;
-        $this->latitude = $longitude;
+        $this->longitude = $longitude;
+        $this->latitude = $latitude;
         $this->address = $address;
         $this->setSynthesizeFields(true);
     }

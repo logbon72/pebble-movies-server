@@ -20,12 +20,7 @@ class AppBaseController extends \BaseController{
     }
 //    
 //    public function doAny() {
-//        $movie = \models\entities\Movie::getOrCreate(array(
-//            'title' => "Le passé",
-//            'rated'=> null,
-//            'critic_rating' => 0.85,
-//            'runtime' => 130
-//        ));
-//        var_dump($movie->toArray());exit;
+//        $movieLoader = new \models\services\OMDBMovieLoader("Le passé");
+//        var_dump($movieLoader->getMovieData());exit;
 //    }
 }

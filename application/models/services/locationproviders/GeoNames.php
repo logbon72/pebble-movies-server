@@ -56,14 +56,14 @@ class GeoNames extends LocationServiceProvider {
 
         //try using nearby placename
         $nearByUrl = self::URL_NEARBY_ADDRESS . '?' . $qString;
-        $nearByResult = $this->callUrl($nearByUrl);
+        $nearByResult = json_decode($this->callUrl($nearByUrl), true);
         if ($this->checkError($nearByResult, 'geonames')) {
             return null;
         } else {
             $resp = $nearByResult['geonames'][0];
         }
 
-        return new \models\services\LookupResult('', $resp['countryCode'], $resp['lng'], $resp['lat'], $resp['adminName1']);
+        return new \models\services\LookupResult('', $resp['countryCode'], $resp['lng'], $resp['lat'], $resp['adminName1'], $resp['countryName']);
     }
 
     /**

@@ -80,11 +80,14 @@ class LocationService extends \IdeoObject {
             $lookUpResult = $serviceProvier->lookUp($preciseLong, $preciseLat);
             \SystemLogger::debug("Making call with: ", $serviceProvier->getClassBasic());
             if ($lookUpResult) {
+                //var_dump($lookUpResult);exit;
                 return $this->cacheLookup($lookUpResult, $preciseLong, $preciseLat);
             } else {
+                
                 if (($lastError = $serviceProvier->getLastError(true))) {
                     \SystemLogger::warn("Error: {$lastError->getMessage()} TYPE: {$lastError->getType()}");
                 }
+                
                 if ($lastError && !$lastError->isRateLimit()) {
                     break;
                 }

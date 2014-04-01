@@ -48,7 +48,8 @@ class LocationService extends \IdeoObject {
             throw new \InvalidArgumentException("There are no service providers defined.");
         }
 
-        \ComparableObjectSorter::sort($this->serviceProviderList, false, true);
+        //\ComparableObjectSorter::sort($this->serviceProviderList, false, true);
+        shuffle($this->serviceProviderList);
         $this->geocodeCachedManager = \models\entities\GeocodeCached::manager();
     }
 
@@ -83,11 +84,11 @@ class LocationService extends \IdeoObject {
                 //var_dump($lookUpResult);exit;
                 return $this->cacheLookup($lookUpResult, $preciseLong, $preciseLat);
             } else {
-                
+
                 if (($lastError = $serviceProvier->getLastError(true))) {
                     \SystemLogger::warn("Error: {$lastError->getMessage()} TYPE: {$lastError->getType()}");
                 }
-                
+
                 if ($lastError && !$lastError->isRateLimit()) {
                     break;
                 }
@@ -102,7 +103,7 @@ class LocationService extends \IdeoObject {
      * @param type $address
      * @return null|\models\entities\GeocodeCached
      */
-    public function addressLookup($address, $extraData=array()) {
+    public function addressLookup($address, $extraData = array()) {
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\AddressLookupI')) {
                 /* @var $serviceProvier AddressLookupI */
@@ -133,7 +134,7 @@ class LocationService extends \IdeoObject {
         $lookupWhere = new \DbTableWhere();
         $countryIso = LookupResult::remapIso($countryIso);
         $lookupWhere->where('country_iso', $countryIso);
-        $postalCode =  str_replace(' ', '', $postalCode);
+        $postalCode = str_replace(' ', '', $postalCode);
         if ($postalCode) {
             $lookupWhere->where(new \DbTableFunction("REPLACE(postal_code, ' ', '')"), $postalCode);
         } elseif ($city) {
@@ -165,8 +166,12 @@ class LocationService extends \IdeoObject {
             'latitude' => $preciseLat,
                 ) + $lookupResult->getCachingData($extraData);
 
-        $saveId = $this->geocodeCachedManager->createEntity($data)->save(true);
-        return $this->geocodeCachedManager->getEntity($saveId);
+        if ($data['longitude'] && $data['longitude']) {
+            $saveId = $this->geocodeCachedManager->createEntity($data)->save(true);
+            return $this->geocodeCachedManager->getEntity($saveId);
+        } else {
+            return null;
+        }
     }
 
     public function computeDistance(\models\GeoLocation $source, \models\GeoLocation $destination) {
@@ -179,9 +184,9 @@ class LocationService extends \IdeoObject {
                 } else {
                     if (($lastError = $serviceProvier->getLastError(true))) {
                         \SystemLogger::warn("Error... {$lastError->getMessage()} TYPE: {$lastError->getType()}");
-                    }
-                    if (!$lastError->isRateLimit()) {
-                        break;
+                        if (!$lastError->isRateLimit()) {
+                            break;
+                        }
                     }
                 }
             }

@@ -20,7 +20,12 @@ class AppBaseController extends \BaseController{
     }
 //    
 //    public function doAny() {
-//        $movieLoader = new \models\services\OMDBMovieLoader("Le passé");
-//        var_dump($movieLoader->getMovieData());exit;
+//        $locationService = \models\services\LocationService::instance();
+//        $geoCached1 = $locationService->addressLookup("547 Riverside Drive, New York, NY");
+//        $geoCached2 = $locationService->addressLookup("2309 Frederick Douglass Blvd., New York NY 10027");
+//        $mapQuest = new \models\services\locationproviders\MapQuest();
+//        debug_op($geoCached1->getGeocode());
+//        debug_op($geoCached2->getGeocode());
+//        debug_op($mapQuest->distanceLookup($geoCached1->getGeocode(), $geoCached2->getGeocode()), true);
 //    }
 }

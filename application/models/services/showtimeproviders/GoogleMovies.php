@@ -16,7 +16,7 @@ namespace models\services\showtimeproviders;
 class GoogleMovies extends \models\services\ShowtimeServiceProvider {
 
     const SHOWTIMES_PAGE = 'http://www.google.com/movies?near={latlng}&date={date}&start={start}';
-    //const SHOWTIMES_PAGE = 'google_moscow{start}.html';
+    //const SHOWTIMES_PAGE = 'google_movies{start}.html';
     const PER_PAGE = 10;
     const MAX_PAGES = 2;
 
@@ -118,7 +118,8 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
             $title = trim($moviedom->find(".name")->first()->text());
             $showtimeType = null;
             $movie['title'] = $this->cleanTitle($title, $showtimeType);
-            $info = str_replace("?", "", trim($moviedom->find("span.info")->first()->text()));
+            $info = preg_replace('/(\x{200E})/iu', "", trim($moviedom->find("span.info")->first()->text()));
+            
             $infoParts = preg_split("/\s+\-\s+/", $info);
             if (($runtime = $this->strToRuntime($infoParts[0]))) {
                 $movie['runtime'] = $runtime;
@@ -128,15 +129,15 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
             }
 
             if (!empty($infoParts) && preg_match("/Rated/i", $infoParts[0])) {
-                $movie['rated'] = preg_replace('/\s*Rated\s*/i', "", $infoParts[0]);
+                $movie['rated'] = preg_replace('/(\s*Rated\s*)/iu', "", $infoParts[0]);
                 array_shift($infoParts);
             } else {
                 $movie['rated'] = "NR";
             }
 
             if (!empty($infoParts)) {
-                $tmpGenre = array_slice(explode("/", $infoParts[0]), 0, 2);
-                $movie['genre'] = join(',', $tmpGenre);
+                $tmpGenre = array_slice(explode("/",  $infoParts[0]), 0, 2);
+                $movie['genre'] = join(', ', $tmpGenre);
             }
 
             $movie['user_rating'] = $movie['critics_rating'] = null;

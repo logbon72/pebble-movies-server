@@ -40,7 +40,7 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
             'apiKey' => $this->apiKey,
         );
 
-        $result = $this->callUrl($this->formatUrl(self::URL_ROUTE, $data, false));
+        $result = $this->callUrl($this->formatUrl(self::URL_ROUTE, $data, false), false);
         $resultDecoded = json_decode($result, true);
         if ($this->checkError($resultDecoded)) {
             return -1;
@@ -103,7 +103,7 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
             return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_RATE_LIMIT, $result['statusCode'] . ': ' . $result['statusDescription']);
         }
 
-        if (empty($result[$key])) {
+        if (empty($result[$key]) || $result[$key][0]['estimatedTotal'] < 1) {
             return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_NOT_FOUND, "No results found.");
         }
 

@@ -89,8 +89,8 @@ class ShowtimeService extends IdeoObject {
             throw new InvalidArgumentException("There are no service providers defined for showtimes.");
         }
 
-        ComparableObjectSorter::sort($this->serviceProviderList, false, true);
-
+        //ComparableObjectSorter::sort($this->serviceProviderList, false, true);
+        shuffle($this->serviceProviderList);
         //initialize showtime manager
         $this->showtimeManager = Showtime::manager();
         $this->theatreManager = Theatre::manager();

@@ -23,6 +23,8 @@ class ProxyController extends \controllers\AppBaseController {
     protected $skipAuths = array('register', 'settings');
     protected $requestId;
 
+    const DATE_BUG_VERSION = 20140401;
+
     /**
      *
      * @var \models\entities\GeocodeCached
@@ -44,8 +46,10 @@ class ProxyController extends \controllers\AppBaseController {
      * @var \models\services\ShowtimeService
      */
     protected $showtimeService;
+    protected $currentVersion;
 
     /**
+     * 
      * 
      * @param \ClientHttpRequest $req
      */
@@ -56,6 +60,7 @@ class ProxyController extends \controllers\AppBaseController {
         ;
         parent::__construct($req);
         $this->showtimeService = \models\services\ShowtimeService::instance();
+        $this->currentVersion = doubleval(\SystemConfig::getInstance()->system['current_version']);
     }
 
     protected function _initCredentials() {
@@ -93,7 +98,22 @@ class ProxyController extends \controllers\AppBaseController {
             $this->geocode = $locationService->postalCodeLookup($postalCode, $countryIso, $city);
         }
 
-        $this->currentDate = $this->_request->getQueryParam('date') ? date('Y-m-d', strtotime($this->_request->getQueryParam('date'))) : date("Y-m-d");
+
+        if ($this->_request->getQueryParam('date')) {
+            $dateTs = strtotime($this->_request->getQueryParam('date'));
+            if ($this->currentVersion > self::DATE_BUG_VERSION) {
+                $this->currentDate = date('Y-m-d', $dateTs);
+            } else {
+                //this date
+                //$dateTs = strtotime($this->_request->getQueryParam('date'));
+                if (date('d', $dateTs) < 10) {
+                    $dateTs = strtotime("yesterday", $dateTs);
+                }
+                $this->currentDate = date('Y-m-d', $dateTs);
+            }
+        } else {
+            $this->currentDate = date("Y-m-d");
+        }
     }
 
     public function doDefault() {
@@ -101,21 +121,20 @@ class ProxyController extends \controllers\AppBaseController {
     }
 
     public function doPreload() {
-        $version = doubleval(\SystemConfig::getInstance()->system['current_version']);
+        $version = $this->currentVersion;
         if ($this->geocode) {
             $status = $this->showtimeService->loadData($this->geocode, $this->currentDate);
             \SystemLogger::addLog("PreloadStatus: ", $status);
             set_time_limit(0);
-            
         }
         $this->result['status'] = $status;
         $this->result['version'] = $version;
     }
-    
+
     public function doPreload11() {
         $this->doPreload();
         $data = array();
-        if($this->result['status']){
+        if ($this->result['status']) {
             //load movies:
             $data = array(
                 'movies' => $this->showtimeService->getMovies($this->geocode, $this->currentDate, 0, false, true),
@@ -174,10 +193,10 @@ class ProxyController extends \controllers\AppBaseController {
         die($data);
     }
 
-    public function doSettings(){
+    public function doSettings() {
         $this->_view->availableCountries = $this->showtimeService->getSupportedCountries();
         $this->_view->geocode = $this->geocode;
-        $this->_view->hasUpdate = doubleval(\SystemConfig::getInstance()->system['current_version']) > doubleval($this->_request->getQueryParam('version'));
+        $this->_view->hasUpdate = $this->currentVersion > doubleval($this->_request->getQueryParam('version'));
         parent::display();
         exit;
     }
@@ -197,7 +216,7 @@ class ProxyController extends \controllers\AppBaseController {
 
     public function doMovieTheatres() {
         $movieId = (int) $this->_request->getQueryParam('movie_id');
-        
+
         $this->result['movie_theatres'] = $movieId && $this->geocode ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate, $movieId, true) : array();
     }
 

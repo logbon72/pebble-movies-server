@@ -100,14 +100,30 @@ class ProxyController extends \controllers\AppBaseController {
 
 
         if ($this->_request->getQueryParam('date')) {
+            $userVersion = doubleval($this->_request->getQueryParam('version'));
             $dateTs = strtotime($this->_request->getQueryParam('date'));
-            if ($this->currentVersion > self::DATE_BUG_VERSION) {
+            if ($userVersion > self::DATE_BUG_VERSION) {
                 $this->currentDate = date('Y-m-d', $dateTs);
             } else {
-                //this date
-                //$dateTs = strtotime($this->_request->getQueryParam('date'));
-                if (date('d', $dateTs) < 10) {
-                    $dateTs = strtotime("yesterday", $dateTs);
+                $dayComp = (int) explode("-", $this->_request->getQueryParam('date'))[2];
+                if ($dayComp < 1) {//1 for monday, 7 for sunday
+                    $dayComp = 7;
+                }
+
+                $actualDayOfWeek = date('N');
+                //$dayComp = intval(date('d', $dateTs));
+                if ($dayComp < 10) {
+                    //$dayToday
+                    if ($actualDayOfWeek > $dayComp) {
+                        $str = $actualDayOfWeek < 7 ? "yesterday" : "tomorrow";
+                    } else if ($actualDayOfWeek < $dayComp) {
+                        $str = $dayComp < 7 ? "tomorrow" : "yesterday";
+                    } else {
+                        $str = "today";
+                    }
+
+
+                    $dateTs = strtotime($str);
                 }
                 $this->currentDate = date('Y-m-d', $dateTs);
             }
@@ -204,10 +220,6 @@ class ProxyController extends \controllers\AppBaseController {
     public function doTheatreMovies() {
         $theatreId = (int) $this->_request->getQueryParam('theatre_id');
         $this->result['theatre_movies'] = $theatreId && $this->geocode ? $this->showtimeService->getMovies($this->geocode, $this->currentDate, $theatreId, true) : array();
-    }
-
-    public function doTheatreMovieShowtimes() {
-        
     }
 
     public function doMovies() {

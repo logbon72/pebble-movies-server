@@ -141,7 +141,6 @@ class ProxyController extends \controllers\AppBaseController {
         if ($this->geocode) {
             $status = $this->showtimeService->loadData($this->geocode, $this->currentDate);
             \SystemLogger::addLog("PreloadStatus: ", $status);
-            set_time_limit(0);
         }
         $this->result['status'] = $status;
         $this->result['version'] = $version;

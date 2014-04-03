@@ -123,7 +123,7 @@ class ShowtimeService extends IdeoObject {
         if (!$forceReload && $this->dataLoaded($locationInfo, $date)) {
             return true;
         }
-
+        set_time_limit(0);
         $results = array();
         foreach ($this->serviceProviderList as $serviceProvider) {
             if ($serviceProvider->supports($locationInfo)) {

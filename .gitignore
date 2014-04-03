@@ -8,3 +8,4 @@
 /application/models/services/showtimeproviders/*_files
 /*.html
 /*_files
+/testdata

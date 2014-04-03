@@ -25,7 +25,25 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
     //put your code here
     public function __construct() {
 
-        $this->supportedCountries = array("AR", "AU", "CA", "CL", "DE", "ES", "FR", "IT", "NZ", "PT", "US", "GB", "CN", "KR", "RU", "IN", "BR");
+        $this->supportedCountries = array(
+            "AR",
+            //"AU",
+            "CA",
+            "CL",
+            "DE",
+            "ES",
+            "FR",
+            "IT",
+            "NZ",
+            "PT",
+            //"US",
+            //"GB",
+            "CN",
+            "KR",
+            "RU",
+            "IN",
+            "BR"
+        );
         $this->priority = 10000;
     }
 
@@ -52,7 +70,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
                 break;
             }
         }
-
+        
         return $allCinemasFound;
     }
 
@@ -119,7 +137,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
             $showtimeType = null;
             $movie['title'] = $this->cleanTitle($title, $showtimeType);
             $info = preg_replace('/(\x{200E})/iu', "", trim($moviedom->find("span.info")->first()->text()));
-            
+
             $infoParts = preg_split("/\s+\-\s+/", $info);
             if (($runtime = $this->strToRuntime($infoParts[0]))) {
                 $movie['runtime'] = $runtime;
@@ -136,8 +154,8 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
             }
 
             if (!empty($infoParts)) {
-                $tmpGenre = array_slice(explode("/",  $infoParts[0]), 0, 2);
-                $movie['genre'] = join(', ', $tmpGenre);
+                $tmpGenre = array_slice(explode("/", $infoParts[0]), 0, 2);
+                $movie['genre'] = array_shift($tmpGenre);
             }
 
             $movie['user_rating'] = $movie['critics_rating'] = null;

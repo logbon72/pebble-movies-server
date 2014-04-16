@@ -33,12 +33,16 @@ class GeocodeCached extends StandardEntity {
 
     public function setLastUpdated($date = null) {
         $dateTs = strtotime($date);
+
         $date = $dateTs ? date('Y-m-d', $dateTs) : new \DbTableFunction("CURRENT_DATE");
-        $newData = array(
+
+        $data = array();
+        copyElementsAtKey(array('country_iso', 'postal_code', 'city'), $this->_data, $data);
+        $newData = $data + array(
             'load_date' => $date
         );
-        $where = $this->getQueryWhere();
-        return GeocodeLoaded::table()->update($newData, $where);
+        return GeocodeLoaded::manager()->createEntity($newData)->save();
+//        return GeocodeLoaded::table()->insert();
     }
 
 }

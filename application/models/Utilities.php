@@ -38,6 +38,12 @@ class Utilities extends IdeoObject {
     public static function getCustomUrl($tag, $secure = false) {
         return ($secure ? "https://" : "http://") . ($tag ? "{$tag}." : "") . SystemConfig::getInstance()->system['root_domain'] . "/";
     }
+    
+    public static function dateFromOffset($date, $offset=0, $format="Y-m-d") {
+        $dateTs = strtotime($date);
+        $newTs = $offset > 0 ? strtotime("+{$offset} days", $dateTs) : $dateTs;
+        return date($format,  $newTs);
+    }
 
 }
 

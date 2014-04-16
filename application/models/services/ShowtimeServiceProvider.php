@@ -38,7 +38,7 @@ abstract class ShowtimeServiceProvider extends ServiceProvider {
      * 
      * 
      */
-    abstract public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null);
+    abstract public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null, $offset=0);
 
     public function supports(\models\entities\GeocodeCached $locationInfo) {
         if (empty($this->supportedCountries)) {

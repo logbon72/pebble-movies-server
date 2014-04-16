@@ -27,7 +27,18 @@ class GeocodeCached extends StandardEntity {
     }
 
     public function getGeocode() {
-        $address = $this->_data['postal_code'] .' '.$this->_data['city'] . ', ' . $this->_data['country_iso'];
+        $address = $this->_data['postal_code'] . ' ' . $this->_data['city'] . ', ' . $this->_data['country_iso'];
         return new \models\GeoLocation($this->_data['found_latitude'], $this->_data['found_longitude'], $address);
     }
+
+    public function setLastUpdated($date = null) {
+        $dateTs = strtotime($date);
+        $date = $dateTs ? date('Y-m-d', $dateTs) : new \DbTableFunction("CURRENT_DATE");
+        $newData = array(
+            'load_date' => $date
+        );
+        $where = $this->getQueryWhere();
+        return GeocodeLoaded::table()->update($newData, $where);
+    }
+
 }

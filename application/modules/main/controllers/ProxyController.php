@@ -31,6 +31,7 @@ class ProxyController extends \controllers\AppBaseController {
      */
     protected $geocode;
     protected $currentDate;
+    protected $dateOffset = 0;
     protected $result = array();
 
     const ALLOWED_LAG = 300;
@@ -97,8 +98,9 @@ class ProxyController extends \controllers\AppBaseController {
             $postalCode = $this->_request->getQueryParam('postalCode');
             $this->geocode = $locationService->postalCodeLookup($postalCode, $countryIso, $city);
         }
+    }
 
-
+    protected function _initDate() {
         if ($this->_request->getQueryParam('date')) {
             $userVersion = doubleval($this->_request->getQueryParam('version'));
             $dateTs = strtotime($this->_request->getQueryParam('date'));
@@ -130,6 +132,12 @@ class ProxyController extends \controllers\AppBaseController {
         } else {
             $this->currentDate = date("Y-m-d");
         }
+
+        $this->dateOffset = intval($this->_request->getQueryParam('dateOffset')) ? : 0;
+        if($this->dateOffset < 0){
+           $this->dateOffset = 0; 
+        }
+        
     }
 
     public function doDefault() {

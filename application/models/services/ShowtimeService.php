@@ -11,17 +11,22 @@ namespace models\services;
 include_once LIB_DIR . 'phpqrcode/qrlib.php';
 include_once LIB_DIR . 'bitlyapi/Bitly.php';
 
-use ComparableObjectSorter;
+use Bitly;
 use DbTableFunction;
+use DbTableWhere;
 use DirectoryIterator;
 use IdeoObject;
+use ImageConverter;
 use InvalidArgumentException;
 use models\entities\GeocodeCached;
+use models\entities\GeocodeLoaded;
 use models\entities\Movie;
 use models\entities\Showtime;
 use models\entities\Theatre;
 use models\entities\TheatreNearby;
 use models\entitymanagers\StandardEntityManager;
+use QRcode;
+use SystemConfig;
 use SystemLogger;
 
 /**
@@ -60,15 +65,16 @@ class ShowtimeService extends IdeoObject {
 
     /**
      *
-     * @var \Bitly
+     * @var Bitly
      */
     protected $bitly;
+
     /**
      *
      * @var ShowtimeServiceProvider[]
      */
     protected $serviceProviderList = array();
-    
+
     const THEATRE_LIMIT = 15;
 
     private function __construct() {
@@ -100,16 +106,10 @@ class ShowtimeService extends IdeoObject {
     public function dataLoaded(GeocodeCached $locationInfo, $date = null) {
         $queryWhere = $locationInfo->getQueryWhere();
         if ($date) {
-            $queryWhere->where('s.show_date', $date);
+            $queryWhere->where('load_date', $date);
         }
 
-        return TheatreNearby::table()
-                        ->selectFrom(array(new DbTableFunction("count(s.id) AS c")), 'tn')
-                        ->innerJoin(array('t' => Theatre::table()), 't.id = tn.theatre_id')
-                        ->innerJoin(array('s' => Showtime::table()), 's.theatre_id = t.id')
-                        ->where($queryWhere)
-                        ->query(true) > 0
-        ;
+        return GeocodeLoaded::manager()->getEntityWhere($queryWhere) !== null;
     }
 
     /**
@@ -119,19 +119,27 @@ class ShowtimeService extends IdeoObject {
      * @param type $forceReload
      * @return boolean
      */
-    public function loadData(GeocodeCached $locationInfo, $date = null, $forceReload = false) {
-        if (!$forceReload && $this->dataLoaded($locationInfo, $date)) {
+    public function loadData(GeocodeCached $locationInfo, $date = null, $forceReload = false, $dateOffset=0) {
+        if(!$date){
+            $date = date('Y-m-d');
+        }
+        
+        $newDate = \Utilities::dateFromOffset($date, $dateOffset);
+        
+        if (!$forceReload && $this->dataLoaded($locationInfo, $newDate)) {
             return true;
         }
+        
         set_time_limit(0);
         $results = array();
+        
         foreach ($this->serviceProviderList as $serviceProvider) {
             if ($serviceProvider->supports($locationInfo)) {
-                $results = $serviceProvider->loadShowtimes($locationInfo, $date);
+                $results = $serviceProvider->loadShowtimes($locationInfo, $date, $dateOffset);
                 ///debug_op($results, true);
                 if (!empty($results)) {
                     //cache and save...
-                    return $this->cacheResult($results, $locationInfo);
+                    return $this->cacheResult($results, $locationInfo, $newDate);
                 }
             }
         }
@@ -139,9 +147,13 @@ class ShowtimeService extends IdeoObject {
         return false;
     }
 
-    protected function cacheResult($results, $locationInfo) {
-        //throw new Exception("Work in progress");
-        //var_dump($results);exit;
+    /**
+     * 
+     * @param array $results
+     * @param GeocodeCached $locationInfo
+     * @return int number of cached results
+     */
+    protected function cacheResult($results, $locationInfo, $date) {
         $return = 0;
         foreach ($results as $theatreMovieShowtime) {
             $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre'], $locationInfo);
@@ -156,6 +168,9 @@ class ShowtimeService extends IdeoObject {
                 SystemLogger::warn("Could not create theatre with data: ", $theatreMovieShowtime['theatre']);
             }
         }
+
+        $locationInfo->setLastUpdated($date);
+
         return $return;
     }
 
@@ -165,8 +180,15 @@ class ShowtimeService extends IdeoObject {
             $showtimes[$k]['movie_id'] = $movie->id;
         }
 
-        return Showtime::table()
-                        ->insert($showtimes, true, true);
+        try {
+            $inserted = Showtime::table()
+                    ->insert($showtimes, false, true);
+        } catch (Exception $e) {
+            \SystemLogger::info("Could not save showtime, possible duplicate, error message: ", $e->getMessage());
+            $inserted = 0;
+        }
+        
+        return $inserted;
     }
 
     public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null) {
@@ -192,7 +214,7 @@ class ShowtimeService extends IdeoObject {
                 ->generateSQL()
         ;
         //array('id', 'show_time', 'show_date', 'url');
-        $showtimeWhere = (new \DbTableWhere())
+        $showtimeWhere = (new DbTableWhere())
                 ->whereInSql('id', $idsIn)
                 ->setOrderBy("theatre_id")
                 ->setOrderBy("movie_id")
@@ -264,8 +286,8 @@ class ShowtimeService extends IdeoObject {
         return $theatres;
     }
 
-    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false) {
-        if (!$this->loadData($locationInfo, $currentDate)) {
+    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false, $dateOffset=0) {
+        if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
             return array();
         }
         $where = $locationInfo->getQueryWhere()
@@ -291,7 +313,7 @@ class ShowtimeService extends IdeoObject {
             $theatres[$result['id']] = explode(",", $result['theatres']);
         }
 
-        $moviesWhere = (new \DbTableWhere())
+        $moviesWhere = (new DbTableWhere())
                 ->whereInArray('id', $ids)
                 ->setOrderBy('title');
 
@@ -312,7 +334,7 @@ class ShowtimeService extends IdeoObject {
                     $movie['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
                 }
             }
-            
+
 
             if ($includeTheatreIds) {
                 $movie['theatres'] = $theatres[$movieInList->id];
@@ -377,16 +399,16 @@ class ShowtimeService extends IdeoObject {
 
             //$l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
             $shorten = $this->getBitly()->shorten($showtime->url, 'j.mp');
-            if($shorten){
+            if ($shorten) {
                 $l = $shorten['url'];
-            }else{
-                $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+            } else {
+                $l = SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
             }
-            
+
             $filename = tempnam(sys_get_temp_dir(), "qrcode_");
             //header("Content-Type: image/png");
-            \QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
-            $converter = new \ImageConverter($filename);
+            QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
+            $converter = new ImageConverter($filename);
             $cacheFile = $this->cacheName($showtime_id);
             if ($converter->convertToPbi($cacheFile)) {
                 return file_get_contents($cacheFile);
@@ -415,10 +437,11 @@ class ShowtimeService extends IdeoObject {
     }
 
     public function getBitly() {
-        if(!$this->bitly){
-            $bitlyConfig = \SystemConfig::getInstance()->bitly;
-            $this->bitly = new \Bitly($bitlyConfig['api_key'], $bitlyConfig['api_secret'], $bitlyConfig['token']);
+        if (!$this->bitly) {
+            $bitlyConfig = SystemConfig::getInstance()->bitly;
+            $this->bitly = new Bitly($bitlyConfig['api_key'], $bitlyConfig['api_secret'], $bitlyConfig['token']);
         }
         return $this->bitly;
     }
+
 }

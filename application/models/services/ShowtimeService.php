@@ -119,20 +119,20 @@ class ShowtimeService extends IdeoObject {
      * @param type $forceReload
      * @return boolean
      */
-    public function loadData(GeocodeCached $locationInfo, $date = null, $forceReload = false, $dateOffset=0) {
-        if(!$date){
+    public function loadData(GeocodeCached $locationInfo, $date = null, $forceReload = false, $dateOffset = 0) {
+        if (!$date) {
             $date = date('Y-m-d');
         }
-        
+
         $newDate = \Utilities::dateFromOffset($date, $dateOffset);
-        
+
         if (!$forceReload && $this->dataLoaded($locationInfo, $newDate)) {
             return true;
         }
-        
+
         set_time_limit(0);
         $results = array();
-        
+
         foreach ($this->serviceProviderList as $serviceProvider) {
             if ($serviceProvider->supports($locationInfo)) {
                 $results = $serviceProvider->loadShowtimes($locationInfo, $date, $dateOffset);
@@ -175,27 +175,45 @@ class ShowtimeService extends IdeoObject {
     }
 
     protected function cacheShowtimes(Theatre $theatre, Movie $movie, $showtimes) {
+        if (empty($showtimes)) {
+            return 0;
+        }
+
         foreach ($showtimes as $k => $showtime) {
             $showtimes[$k]['theatre_id'] = $theatre->id;
             $showtimes[$k]['movie_id'] = $movie->id;
         }
 
+        $queryWhere = (new DbTableWhere())
+                ->where('show_date', $showtime['show_date'])
+                ->where('show_time', $showtime['show_time'])
+                ->where('theatre_id', $theatre->id)
+                ->where('movie_id', $movie->id)
+                ->where('type', $showtime['type'])
+        ;
+
+        if (Showtime::manager()->getEntityWhere($queryWhere)) {
+            \SystemLogger::info("Show times have already been cached.");
+            return 1;
+        }
+
         try {
             $inserted = Showtime::table()
-                    ->insert($showtimes, false, true);
-        } catch (Exception $e) {
+                    ->insert($showtimes, true, true);
+        } catch (\Exception $e) {
             \SystemLogger::info("Could not save showtime, possible duplicate, error message: ", $e->getMessage());
             $inserted = 0;
         }
-        
+
         return $inserted;
     }
 
-    public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null) {
-        if (!$this->loadData($locationInfo, $currentDate)) {
+    public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null, $dateOffset=0) {
+        if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
             return array();
         }
 
+        $currentDate = \Utilities::dateFromOffset($currentDate, $dateOffset);
         $where = $locationInfo->getQueryWhere()
                 ->where('s.show_date', $currentDate)
         ;
@@ -240,10 +258,12 @@ class ShowtimeService extends IdeoObject {
         return $showtimesResult;
     }
 
-    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null, $includeMovieIds = false) {
-        if (!$this->loadData($locationInfo, $currentDate)) {
+    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null, $includeMovieIds = false, $dateOffset = 0) {
+        if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
             return array();
         }
+        
+        $currentDate = \Utilities::dateFromOffset($currentDate, $dateOffset);
         $where = $locationInfo->getQueryWhere()
                 ->where('s.show_date', $currentDate)
                 ->setOrderBy('distance_m', 'ASC')
@@ -286,10 +306,13 @@ class ShowtimeService extends IdeoObject {
         return $theatres;
     }
 
-    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false, $dateOffset=0) {
+    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false, $dateOffset = 0) {
         if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
             return array();
         }
+
+        $currentDate = \Utilities::dateFromOffset($currentDate, $dateOffset);
+
         $where = $locationInfo->getQueryWhere()
                 ->where('s.show_date', $currentDate)
         ;
@@ -443,5 +466,26 @@ class ShowtimeService extends IdeoObject {
         }
         return $this->bitly;
     }
+    
 
+    public static function cleanShowdates(){
+        $staleDate = date('Y-m-d', strtotime("-3 days"));
+        $deleted = Showtime::table()->delete("show_date <= '{$staleDate}'");
+        \SystemLogger::info("Cleaned ", $deleted, "show dates");
+        return $deleted;
+    }
+    
+    public static function cleanPbis() {
+        $staleDate = strtotime("-4 days");
+        $files = glob(CACHE_DIR . "/*");
+        $removed = 0;
+        foreach ($files as $file){
+            \SystemLogger::info("Looking at: ", $file);
+            if(filemtime($file) < $staleDate && unlink($file)){
+                \SystemLogger::info("\tRemoved file: ", $file);
+                $removed++;
+            }
+        }
+        return $removed;
+    }
 }

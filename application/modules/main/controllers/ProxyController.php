@@ -8,26 +8,39 @@
 
 namespace main\controllers;
 
+use ClientHttpRequest;
+use controllers\AppBaseController;
+use main\models\ApiError;
+use main\models\RequestLogger;
+use main\models\Response;
+use models\entities\GeocodeCached;
+use models\entities\UserDevice;
+use models\entitymanagers\UserDeviceManager;
+use models\services\LocationService;
+use models\services\ShowtimeService;
+use SystemConfig;
+use SystemLogger;
+
 /**
  * Description of ProxyController
  *
  * @author intelWorX
  */
-class ProxyController extends \controllers\AppBaseController {
+class ProxyController extends AppBaseController {
 
     /**
      *
-     * @var \models\entities\UserDevice
+     * @var UserDevice
      */
     protected $userDevice;
-    protected $skipAuths = array('register', 'settings');
+    protected $skipAuths = array('register', 'settings', 'clean');
     protected $requestId;
 
     const DATE_BUG_VERSION = 20140401;
 
     /**
      *
-     * @var \models\entities\GeocodeCached
+     * @var GeocodeCached
      */
     protected $geocode;
     protected $currentDate;
@@ -38,13 +51,13 @@ class ProxyController extends \controllers\AppBaseController {
 
     /**
      *
-     * @var \main\models\Response
+     * @var Response
      */
     protected $response;
 
     /**
      *
-     * @var \models\services\ShowtimeService
+     * @var ShowtimeService
      */
     protected $showtimeService;
     protected $currentVersion;
@@ -52,32 +65,32 @@ class ProxyController extends \controllers\AppBaseController {
     /**
      * 
      * 
-     * @param \ClientHttpRequest $req
+     * @param ClientHttpRequest $req
      */
     public function __construct($req) {
-        $this->response = new \main\models\Response();
-        $req->addHook(new \main\models\RequestLogger(), 1000)
+        $this->response = new Response();
+        $req->addHook(new RequestLogger(), 1000)
         //->addHook(new \main\models\DataPreloader())
         ;
         parent::__construct($req);
-        $this->showtimeService = \models\services\ShowtimeService::instance();
-        $this->currentVersion = doubleval(\SystemConfig::getInstance()->system['current_version']);
+        $this->showtimeService = ShowtimeService::instance();
+        $this->currentVersion = doubleval(SystemConfig::getInstance()->system['current_version']);
     }
 
     protected function _initCredentials() {
         $token = $this->_request->getQueryParam('token');
-        $this->userDevice = \models\entitymanagers\UserDeviceManager::validate($token, $this->requestId);
+        $this->userDevice = UserDeviceManager::validate($token, $this->requestId);
         $action = $this->_request->getAction();
         $testMode = /* !\Application::currentInstance()->isProd() && */ $this->_request->getQueryParam('skip') == 1;
         if (!$this->userDevice && !$testMode && !in_array($action, $this->skipAuths)) {
             $this->response->forbidden();
-            $this->response->addError(new \main\models\ApiError("FORBIDDEN", "Access denied"));
+            $this->response->addError(new ApiError("FORBIDDEN", "Access denied"));
             $this->display();
             exit;
         }
 
         if ($this->userDevice) {
-            \main\models\RequestLogger::addRecord(array(
+            RequestLogger::addRecord(array(
                 'request_id' => $this->requestId,
                 'req_type' => $this->_request->getAction(),
                 'user_device_id' => $this->userDevice->id,
@@ -86,7 +99,7 @@ class ProxyController extends \controllers\AppBaseController {
     }
 
     protected function _initGeocode() {
-        $locationService = \models\services\LocationService::instance();
+        $locationService = LocationService::instance();
         if ($this->_request->hasQueryParam('latlng')) {
             $latLng = $this->_request->getQueryParam('latlng');
             $this->geocode = $locationService->lookUp($latLng);
@@ -147,8 +160,8 @@ class ProxyController extends \controllers\AppBaseController {
     public function doPreload() {
         $version = $this->currentVersion;
         if ($this->geocode) {
-            $status = $this->showtimeService->loadData($this->geocode, $this->currentDate);
-            \SystemLogger::addLog("PreloadStatus: ", $status);
+            $status = $this->showtimeService->loadData($this->geocode, $this->currentDate, false, $this->dateOffset);
+            SystemLogger::info("PreloadStatus: ", $status);
         }
         $this->result['status'] = $status;
         $this->result['version'] = $version;
@@ -160,9 +173,9 @@ class ProxyController extends \controllers\AppBaseController {
         if ($this->result['status']) {
             //load movies:
             $data = array(
-                'movies' => $this->showtimeService->getMovies($this->geocode, $this->currentDate, 0, false, true),
-                'theatres' => $this->showtimeService->getTheatres($this->geocode, $this->currentDate, 0, false, true),
-                'showtimes' => $this->showtimeService->getShowtimes($this->geocode, $this->currentDate, 0, 0)
+                'movies' => $this->showtimeService->getMovies($this->geocode, $this->currentDate, 0, false, true, $this->dateOffset),
+                'theatres' => $this->showtimeService->getTheatres($this->geocode, $this->currentDate, 0, false, true, $this->dateOffset),
+                'showtimes' => $this->showtimeService->getShowtimes($this->geocode, $this->currentDate, 0, 0, $this->dateOffset)
             );
         }
         $this->result['data'] = $data;
@@ -175,12 +188,12 @@ class ProxyController extends \controllers\AppBaseController {
         if (!$this->userDevice) {
             if ($diff > self::ALLOWED_LAG) {
                 $this->response->badRequest();
-                $this->response->addError(new \main\models\ApiError(400, "Validation error"));
+                $this->response->addError(new ApiError(400, "Validation error"));
             } else {
                 $device_uuid = $this->_request->getPostData('device_uuid');
-                $userDevice = \models\entitymanagers\UserDeviceManager::register($device_uuid);
+                $userDevice = UserDeviceManager::register($device_uuid);
                 if (!$userDevice) {
-                    $this->response->addError(new \main\models\ApiError(400, "Error creating entry"));
+                    $this->response->addError(new ApiError(400, "Error creating entry"));
                 } else {
                     $this->userDevice = $userDevice;
                 }
@@ -195,7 +208,7 @@ class ProxyController extends \controllers\AppBaseController {
 
     protected function _checkLocationInfo() {
         if (!$this->geocode) {
-            $this->response->addError(new \main\models\ApiError("NO_GEO", "No geolocation info"));
+            $this->response->addError(new ApiError("NO_GEO", "No geolocation info"));
             $this->display();
             exit;
         }
@@ -248,7 +261,7 @@ class ProxyController extends \controllers\AppBaseController {
 
     protected function _enforceMethod($method = 'GET') {
         if (strcasecmp($_SERVER['REQUEST_METHOD'], $method) !== 0) {
-            $this->response->addError(new \main\models\ApiError(400, "Invalid request method"));
+            $this->response->addError(new ApiError(400, "Invalid request method"));
             $this->response->output();
             exit;
         }
@@ -275,4 +288,14 @@ class ProxyController extends \controllers\AppBaseController {
         return $this->currentDate;
     }
 
+    public function doClean(){
+        if($this->_request->getQueryParam('skip') == 200){
+            $deleted = ShowtimeService::cleanShowdates();
+            echo "Showtimes deleted: ", $deleted, "<br/>";
+            $cleaned = ShowtimeService::cleanPbis();
+            echo "PBI deleted: ", $cleaned, "<br/>";
+            
+        }
+        exit;
+    }
 }

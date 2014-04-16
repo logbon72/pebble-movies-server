@@ -145,7 +145,8 @@ class LocationService extends \IdeoObject {
         if ($cached) {
             return $cached;
         }
-        $address = preg_replace('/\s+/', ' ', "{$postalCode} {$city} {$countryIso}");
+        $country = LookupResult::$ISO_TABLE[$countryIso];
+        $address = preg_replace('/\s+/', ' ', "{$postalCode} {$city}, {$country}");
         return $this->addressLookup(trim($address), array(
                     'postal_code' => $postalCode,
                     'city' => $city,

@@ -42,19 +42,21 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
             "KR",
             "RU",
             "IN",
-            "BR"
+            "BR",
+            "NL",
+            "MY",
         );
         $this->priority = 10000;
     }
 
-    public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null) {
+    public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null, $offset = 0) {
 
-        $this->currentDate = $date;
+        $this->currentDate = \Utilities::dateFromOffset($date, $offset);
         $allCinemasFound = array();
         for ($i = 0; $i < self::MAX_PAGES; $i++) {
             $data = array(
                 'latlng' => $geocode->getGeocode(),
-                'date' => 0,
+                'date' => $offset,
                 'start' => $i * self::PER_PAGE,
                     //'page' => $i+1,
             );
@@ -70,7 +72,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
                 break;
             }
         }
-        
+
         return $allCinemasFound;
     }
 

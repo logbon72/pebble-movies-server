@@ -31,11 +31,11 @@ class IMDBScraper extends ShowtimeServiceProvider {
     protected $currentDate;
     protected $supportedCountries = array("AR", "AU", "CA", "CL", "DE", "ES", "FR", "IT", "MX", "NZ", "PT", "US", "GB");
 
-    public function loadShowtimes(GeocodeCached $geocode, $date = null) {
+    public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0) {
 
         $data = array(
             'countryIso' => $geocode->country_iso,
-            'date' => $date ? : date('Y-m-d'),
+            'date' => \Utilities::dateFromOffset($date ? : date('Y-m-d'), $offset),
             'postalCode' => urlencode($geocode->postal_code),
         );
 
@@ -167,7 +167,7 @@ class IMDBScraper extends ShowtimeServiceProvider {
                         $lastAp = $tmp[1] ? : $lastAp;
                         $timeThing = $tmp[0];
                     }
-                    
+
                     $times[] = array(
                         'show_date' => $this->currentDate,
                         'show_time' => date('H:i:s', strtotime("{$timeThing} {$lastAp}")),

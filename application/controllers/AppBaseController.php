@@ -13,11 +13,12 @@ namespace controllers;
  *
  * @author intelWorX
  */
-class AppBaseController extends \BaseController{
-    
+class AppBaseController extends \BaseController {
+
     public function doDefault() {
         $this->_request->redirect("http://pblweb.com/appstore/532eadd24e66a6b2a4000137/");
     }
+
 //    
 //    public function doAny() {
 //        $locationService = \models\services\LocationService::instance();
@@ -28,4 +29,20 @@ class AppBaseController extends \BaseController{
 //        debug_op($geoCached2->getGeocode());
 //        debug_op($mapQuest->distanceLookup($geoCached1->getGeocode(), $geoCached2->getGeocode()), true);
 //    }
+    protected function _enforceMethod($method = 'GET') {
+        if (strcasecmp($_SERVER['REQUEST_METHOD'], $method) !== 0) {
+            $this->response->addError(new ApiError(400, "Invalid request method"));
+            $this->response->output();
+            exit;
+        }
+    }
+
+    protected function _enforceGET() {
+        $this->_enforceMethod('GET');
+    }
+
+    protected function _enforcePOST() {
+        $this->_enforceMethod('POST');
+    }
+
 }

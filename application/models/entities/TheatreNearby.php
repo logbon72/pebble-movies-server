@@ -8,6 +8,8 @@
 
 namespace models\entities;
 
+use models\services\LocationService;
+
 /**
  * Description of TheatreNearby
  *
@@ -20,7 +22,7 @@ class TheatreNearby extends StandardEntity {
         $this->setManyToOne('theatre', Theatre::manager());
     }
 
-    public static function getOrCreate(GeocodeCached $locationInfo, Theatre $theatre) {
+    public static function getOrCreate(GeocodeCached $locationInfo, Theatre $theatre, $computeDistance = false) {
         $where = $locationInfo->getQueryWhere()
                 ->where('theatre_id', $theatre->id);
 
@@ -31,7 +33,7 @@ class TheatreNearby extends StandardEntity {
         }
 
         $data = $locationInfo->toArray(0, 2, array('country_iso', 'postal_code', 'country', 'city'));
-        $data['distance_m'] = \models\services\LocationService::instance()->computeDistance($locationInfo->getGeocode(), $theatre->getGeocode());
+        $data['distance_m'] = $computeDistance ? LocationService::instance()->computeDistance($locationInfo->getGeocode(), $theatre->getGeocode()) : -1;
         $data['theatre_id'] = $theatre->id;
         $nearbyId = $manager->createEntity($data)->save();
         return $nearbyId ? $manager->getEntity($nearbyId) : null;

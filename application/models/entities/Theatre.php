@@ -24,7 +24,7 @@ class Theatre extends StandardEntity {
         throw new \RuntimeException("Yet to implement");
     }
 
-    public static function getOrCreate($theatreData, $locationInfo = null, $lookUpAddress = false) {
+    public static function getOrCreate($theatreData, $locationInfo = null, $lookUpAddress = false, $computeDistance=false) {
         $manager = self::manager();
         $findWhere = (new \DbTableWhere())
                 ->where('name', $theatreData['name'])
@@ -46,9 +46,10 @@ class Theatre extends StandardEntity {
         $theatreId = $manager->createEntity($theatreData)->save();
         if ($theatreId) {
             $theatre = $manager->getEntity($theatreId);
-            TheatreNearby::getOrCreate($locationInfo, $theatre);
+            TheatreNearby::getOrCreate($locationInfo, $theatre, $computeDistance);
             return $theatre;
         }
+        
         return null;
     }
 

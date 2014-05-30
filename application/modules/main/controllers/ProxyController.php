@@ -11,6 +11,7 @@ namespace main\controllers;
 use ClientHttpRequest;
 use controllers\AppBaseController;
 use main\models\ApiError;
+use main\models\ProxyMode;
 use main\models\RequestLogger;
 use main\models\Response;
 use models\entities\GeocodeCached;
@@ -37,6 +38,7 @@ class ProxyController extends AppBaseController {
     protected $requestId;
 
     const DATE_BUG_VERSION = 20140401;
+    const UPGRADE_COMPACT_VERSION = 20140528;
 
     /**
      *
@@ -61,6 +63,7 @@ class ProxyController extends AppBaseController {
      */
     protected $showtimeService;
     protected $currentVersion;
+    protected $userVersion;
 
     /**
      * 
@@ -69,12 +72,11 @@ class ProxyController extends AppBaseController {
      */
     public function __construct($req) {
         $this->response = new Response();
-        $req->addHook(new RequestLogger(), 1000)
-        //->addHook(new \main\models\DataPreloader())
-        ;
+        $req->addHook(new RequestLogger(), 1000);
         parent::__construct($req);
         $this->showtimeService = ShowtimeService::instance();
         $this->currentVersion = doubleval(SystemConfig::getInstance()->system['current_version']);
+        $this->userVersion = doubleval($this->_request->getQueryParam('version'));
     }
 
     protected function _initCredentials() {
@@ -115,9 +117,9 @@ class ProxyController extends AppBaseController {
 
     protected function _initDate() {
         if ($this->_request->getQueryParam('date')) {
-            $userVersion = doubleval($this->_request->getQueryParam('version'));
+            //$userVersion = doubleval($this->_request->getQueryParam('version'));
             $dateTs = strtotime($this->_request->getQueryParam('date'));
-            if ($userVersion > self::DATE_BUG_VERSION) {
+            if ($this->userVersion > self::DATE_BUG_VERSION) {
                 $this->currentDate = date('Y-m-d', $dateTs);
             } else {
                 $dayComp = (int) explode("-", $this->_request->getQueryParam('date'))[2];
@@ -147,10 +149,9 @@ class ProxyController extends AppBaseController {
         }
 
         $this->dateOffset = intval($this->_request->getQueryParam('dateOffset')) ? : 0;
-        if($this->dateOffset < 0){
-           $this->dateOffset = 0; 
+        if ($this->dateOffset < 0) {
+            $this->dateOffset = 0;
         }
-        
     }
 
     public function doDefault() {
@@ -232,7 +233,7 @@ class ProxyController extends AppBaseController {
     public function doSettings() {
         $this->_view->availableCountries = $this->showtimeService->getSupportedCountries();
         $this->_view->geocode = $this->geocode;
-        $this->_view->hasUpdate = $this->currentVersion > doubleval($this->_request->getQueryParam('version'));
+        $this->_view->hasUpdate = $this->currentVersion > $this->userVersion;
         parent::display();
         exit;
     }
@@ -252,29 +253,6 @@ class ProxyController extends AppBaseController {
         $this->result['movie_theatres'] = $movieId && $this->geocode ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate, $movieId, true) : array();
     }
 
-    public function doTest() {
-//        $imdbLoader = new \models\services\showtimeproviders\IMDBScraper();
-//        $data = $imdbLoader->loadShowtimes($this->geocode);
-//        var_dump($data);
-//        exit;
-    }
-
-    protected function _enforceMethod($method = 'GET') {
-        if (strcasecmp($_SERVER['REQUEST_METHOD'], $method) !== 0) {
-            $this->response->addError(new ApiError(400, "Invalid request method"));
-            $this->response->output();
-            exit;
-        }
-    }
-
-    protected function _enforceGET() {
-        $this->_enforceMethod('GET');
-    }
-
-    protected function _enforcePOST() {
-        $this->_enforceMethod('POST');
-    }
-
     public function display() {
         $this->response->setResult($this->result);
         $this->response->output();
@@ -288,14 +266,22 @@ class ProxyController extends AppBaseController {
         return $this->currentDate;
     }
 
-    public function doClean(){
-        if($this->_request->getQueryParam('skip') == 200){
+    public function doClean() {
+        if ($this->_request->getQueryParam('skip') == 200) {
             $deleted = ShowtimeService::cleanShowdates();
             echo "Showtimes deleted: ", $deleted, "<br/>";
             $cleaned = ShowtimeService::cleanPbis();
             echo "PBI deleted: ", $cleaned, "<br/>";
-            
         }
         exit;
     }
+
+    protected function _initMode() {
+        if ($this->userVersion && $this->userVersion > self::UPGRADE_COMPACT_VERSION) {
+            ProxyMode::setMode(ProxyMode::MODE_VERSION_COMPACT);
+        } else {
+            ProxyMode::setMode(ProxyMode::MODE_VERSION_LEGACY);
+        }
+    }
+
 }

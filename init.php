@@ -8,6 +8,7 @@ $hostConfigMap = array(
     '/^localhost$/' => "dev",
     '/^jto$/' => "test",
     '/^192\.169\.42\.186$/' => "test",
+    '/^192\.168\./' => "dev",
     '/pbmovies\.orilogbon\.me$/' => "live",
 );
 

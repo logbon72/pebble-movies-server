@@ -39,6 +39,7 @@ class ProxyController extends AppBaseController {
 
     const DATE_BUG_VERSION = 20140401;
     const UPGRADE_COMPACT_VERSION = 20140528;
+    const UPGRADE_FORCE_LOC = 20140528;
 
     /**
      *
@@ -73,10 +74,10 @@ class ProxyController extends AppBaseController {
     public function __construct($req) {
         $this->response = new Response();
         $req->addHook(new RequestLogger(), 1000);
+        $this->currentVersion = doubleval(SystemConfig::getInstance()->system['current_version']);
+        $this->userVersion = doubleval($req->getQueryParam('version'));
         parent::__construct($req);
         $this->showtimeService = ShowtimeService::instance();
-        $this->currentVersion = doubleval(SystemConfig::getInstance()->system['current_version']);
-        $this->userVersion = doubleval($this->_request->getQueryParam('version'));
     }
 
     protected function _initCredentials() {
@@ -173,10 +174,15 @@ class ProxyController extends AppBaseController {
         $data = array();
         if ($this->result['status']) {
             //load movies:
+            $movieFields = array();
+            $theatreFields = array();
             $data = array(
-                'movies' => $this->showtimeService->getMovies($this->geocode, $this->currentDate, 0, false, true, $this->dateOffset),
-                'theatres' => $this->showtimeService->getTheatres($this->geocode, $this->currentDate, 0, false, true, $this->dateOffset),
-                'showtimes' => $this->showtimeService->getShowtimes($this->geocode, $this->currentDate, 0, 0, $this->dateOffset)
+                'movies' => $this->showtimeService->getMovies($this->geocode, $this->currentDate, 0, false, true, $this->dateOffset, $movieFields),
+                'theatres' => $this->showtimeService->getTheatres($this->geocode, $this->currentDate, 0, false, true, $this->dateOffset, $theatreFields),
+                'showtimes' => $this->showtimeService->getShowtimes($this->geocode, $this->currentDate, 0, 0, $this->dateOffset),
+                'showtime_fields' => array('id', 'time', 'type', 'link'),
+                'movie_fields' => $movieFields,
+                'theatre_fields' => $theatreFields,
             );
         }
         $this->result['data'] = $data;
@@ -234,6 +240,7 @@ class ProxyController extends AppBaseController {
         $this->_view->availableCountries = $this->showtimeService->getSupportedCountries();
         $this->_view->geocode = $this->geocode;
         $this->_view->hasUpdate = $this->currentVersion > $this->userVersion;
+        $this->_view->showForceLocation = $this->userVersion >= self::UPGRADE_FORCE_LOC;
         parent::display();
         exit;
     }
@@ -277,7 +284,7 @@ class ProxyController extends AppBaseController {
     }
 
     protected function _initMode() {
-        if ($this->userVersion && $this->userVersion > self::UPGRADE_COMPACT_VERSION) {
+        if ($this->userVersion && $this->userVersion >= self::UPGRADE_COMPACT_VERSION) {
             ProxyMode::setMode(ProxyMode::MODE_VERSION_COMPACT);
         } else {
             ProxyMode::setMode(ProxyMode::MODE_VERSION_LEGACY);

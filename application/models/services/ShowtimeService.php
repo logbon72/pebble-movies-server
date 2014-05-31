@@ -18,6 +18,7 @@ use DirectoryIterator;
 use IdeoObject;
 use ImageConverter;
 use InvalidArgumentException;
+use main\models\ProxyMode;
 use models\entities\GeocodeCached;
 use models\entities\GeocodeLoaded;
 use models\entities\Movie;
@@ -28,6 +29,7 @@ use models\entitymanagers\StandardEntityManager;
 use QRcode;
 use SystemConfig;
 use SystemLogger;
+use Utilities;
 
 /**
  * Description of ShowtimeService
@@ -124,7 +126,7 @@ class ShowtimeService extends IdeoObject {
             $date = date('Y-m-d');
         }
 
-        $newDate = \Utilities::dateFromOffset($date, $dateOffset);
+        $newDate = Utilities::dateFromOffset($date, $dateOffset);
 
         if (!$forceReload && $this->dataLoaded($locationInfo, $newDate)) {
             return true;
@@ -208,12 +210,12 @@ class ShowtimeService extends IdeoObject {
         return $inserted;
     }
 
-    public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null, $dateOffset=0) {
+    public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null, $dateOffset = 0) {
         if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
             return array();
         }
 
-        $currentDate = \Utilities::dateFromOffset($currentDate, $dateOffset);
+        $currentDate = Utilities::dateFromOffset($currentDate, $dateOffset);
         $where = $locationInfo->getQueryWhere()
                 ->where('s.show_date', $currentDate)
         ;
@@ -252,18 +254,37 @@ class ShowtimeService extends IdeoObject {
             }
             $showtimeArr = $showtime->toArray(0, 1, array('id', 'show_time', 'type'));
             $showtimeArr['link'] = strlen($showtime->url) > 0;
-            $showtimesResult[$key][] = $showtimeArr;
+            if (ProxyMode::isCompact()) {
+                $showtimesResult[$key][] = $this->compactShowtime($showtimeArr);
+            } else {
+                $showtimesResult[$key][] = $showtimeArr;
+            }
         }
 
         return $showtimesResult;
     }
 
-    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null, $includeMovieIds = false, $dateOffset = 0) {
+    private function compactShowtime($showtimeArr, $valsOnly = true) {
+        $compacted = array();
+        $compacted['id'] = intval($showtimeArr['id']);
+        $compacted['t'] = preg_replace('/:00$/', '', $showtimeArr['show_time']);
+        $compacted['r'] = Showtime::compact($showtimeArr['type']);
+        if ($showtimeArr['link']) {
+            $compacted['l'] = 1;
+        } else {
+            if ($valsOnly) {
+                $compacted['l'] = 0;
+            }
+        }
+        return $valsOnly ? array_values($compacted) : $compacted;
+    }
+
+    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null, $includeMovieIds = false, $dateOffset = 0, &$theatreFields = array()) {
         if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
             return array();
         }
-        
-        $currentDate = \Utilities::dateFromOffset($currentDate, $dateOffset);
+
+        $currentDate = Utilities::dateFromOffset($currentDate, $dateOffset);
         $where = $locationInfo->getQueryWhere()
                 ->where('s.show_date', $currentDate)
                 ->setOrderBy('distance_m', 'ASC')
@@ -281,11 +302,12 @@ class ShowtimeService extends IdeoObject {
         ;
 
         $theatres = array();
+        $theatreFields = array('id', 'name', 'address', 'distance_m');
         foreach ($ids as $idRow) {
             $theatre = $this->theatreManager->getEntity($idRow['id']);
             /* @var $theatre Theatre */
             if ($theatre) {
-                $theatreArr = $theatre->toArray(Theatre::TO_ARRAY_MVA, 1, array('id', 'name', 'address'));
+                $theatreArr = $theatre->toArray(Theatre::TO_ARRAY_MVA, 1, $theatreFields);
                 $theatreArr['distance_m'] = $idRow['distance_m'];
                 if ($includeShowtimes) {
                     $theatreArr['showtimes'] = [];
@@ -298,20 +320,35 @@ class ShowtimeService extends IdeoObject {
                 if ($includeMovieIds) {
                     $theatreArr['movies'] = explode(",", $idRow['movies']);
                 }
-                $theatres[] = $theatreArr;
+                $theatres[] = ProxyMode::isCompact() ? $this->compactTheatre($theatreArr) : $theatreArr;
             }
+        }
+        if ($includeShowtimes) {
+            $theatreFields[] = 'showtimes';
+        }
+
+        if ($includeMovieIds) {
+            $theatreFields[] = 'movies';
         }
 
         $this->_filterObject($theatres);
         return $theatres;
     }
 
-    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false, $dateOffset = 0) {
+    private function compactTheatre($theatreArr) {
+        if(!$theatreArr['distance_m']){
+            $theatreArr['distance_m'] = -1;
+        }
+        $compacted = array_values($theatreArr);
+        return $compacted;
+    }
+
+    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false, $dateOffset = 0, &$movieFields = array()) {
         if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
             return array();
         }
 
-        $currentDate = \Utilities::dateFromOffset($currentDate, $dateOffset);
+        $currentDate = Utilities::dateFromOffset($currentDate, $dateOffset);
 
         $where = $locationInfo->getQueryWhere()
                 ->where('s.show_date', $currentDate)
@@ -362,11 +399,24 @@ class ShowtimeService extends IdeoObject {
             if ($includeTheatreIds) {
                 $movie['theatres'] = $theatres[$movieInList->id];
             }
-            $movies[] = $movie;
-        }
 
+            $movies[] = ProxyMode::isCompact() ? $this->compactMovie($movie) : $movie;
+        }
+        if ($includeTheatreIds) {
+            $movieFields[] = 'theatres';
+        }
         $this->_filterObject($movies);
         return $movies;
+    }
+
+    private function compactMovie($movie) {
+        $compact = array_values($movie);
+//        foreach ($compact as $f => $v) {
+//            if (is_null($v)) {
+//                $compact[$f] = 0;
+//            }
+//        }
+        return $compact;
     }
 
     /**
@@ -421,20 +471,24 @@ class ShowtimeService extends IdeoObject {
             }
 
             //$l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
-            $shorten = $this->getBitly()->shorten($showtime->url, 'j.mp');
-            if ($shorten) {
-                $l = $shorten['url'];
-            } else {
-                $l = SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
-            }
+            try {
+                $shorten = $this->getBitly()->shorten($showtime->url, 'j.mp');
+                if ($shorten) {
+                    $l = $shorten['url'];
+                } else {
+                    $l = SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+                }
 
-            $filename = tempnam(sys_get_temp_dir(), "qrcode_");
-            //header("Content-Type: image/png");
-            QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
-            $converter = new ImageConverter($filename);
-            $cacheFile = $this->cacheName($showtime_id);
-            if ($converter->convertToPbi($cacheFile)) {
-                return file_get_contents($cacheFile);
+                $filename = tempnam(sys_get_temp_dir(), "qrcode_");
+                //header("Content-Type: image/png");
+                QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
+                $converter = new ImageConverter($filename);
+                $cacheFile = $this->cacheName($showtime_id);
+                if ($converter->convertToPbi($cacheFile)) {
+                    return file_get_contents($cacheFile);
+                }
+            } catch (\Exception $e) {
+                \SystemLogger::error(get_class($e), $e->getTraceAsString());
             }
         }
         return null;
@@ -466,26 +520,26 @@ class ShowtimeService extends IdeoObject {
         }
         return $this->bitly;
     }
-    
 
-    public static function cleanShowdates(){
+    public static function cleanShowdates() {
         $staleDate = date('Y-m-d', strtotime("-3 days"));
         $deleted = Showtime::table()->delete("show_date <= '{$staleDate}'");
         \SystemLogger::info("Cleaned ", $deleted, "show dates");
         return $deleted;
     }
-    
+
     public static function cleanPbis() {
         $staleDate = strtotime("-4 days");
         $files = glob(CACHE_DIR . "/*");
         $removed = 0;
-        foreach ($files as $file){
+        foreach ($files as $file) {
             \SystemLogger::info("Looking at: ", $file);
-            if(filemtime($file) < $staleDate && unlink($file)){
+            if (filemtime($file) < $staleDate && unlink($file)) {
                 \SystemLogger::info("\tRemoved file: ", $file);
                 $removed++;
             }
         }
         return $removed;
     }
+
 }

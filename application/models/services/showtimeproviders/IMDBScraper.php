@@ -29,7 +29,7 @@ class IMDBScraper extends ShowtimeServiceProvider {
     const MAX_METASCORE = 100.0;
 
     protected $currentDate;
-    protected $supportedCountries = array("AR", "AU", "CA", "CL", "DE", "ES", "FR", "IT", "MX", "NZ", "PT", "US", "GB");
+    protected $supportedCountries = array(/*"AR", */"AU", /*"CA",*/ "CL", "DE", "ES", "FR", "IT", "MX", "NZ", "PT", "US", "GB");
 
     public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0) {
 

@@ -33,7 +33,7 @@
                         These opions will be used if your current location is not available.
                     </div>    
                     <div data-role="fieldcontain">
-                        <label for="DefaultCountry">Country:</label>
+                        <label for="DefaultCountry">Country</label>
                         <select name="DefaultCountry" id="DefaultCountry" class="setting">
                             <option></option>
                             {if $smarty.get.country}
@@ -70,6 +70,17 @@
                             {html_options options=$units selected=$smarty.request.unit}
                         </select>
                     </div>
+
+                    {if $showForceLocation}
+                        <div style="font-size: 0.9em; font-weight: bold;">This option is useful if you don't move around much. It is however recommended that you leave this as No.</div>
+                        <div data-role="fieldcontain">
+                            <label for="ForceLocation">Force this Location?</label>
+                            <select name="ForceLocation" id="ForceLocation" data-role="slider" style="width: 7em;" class="setting" >
+                                {$units = ["0" => "No", "1"=>"Yes"]}
+                                {html_options options=$units selected=$smarty.request.forceLocation}
+                            </select>
+                        </div>
+                    {/if}
                 </div>
 
                 <div class="ui-body ui-body-b">

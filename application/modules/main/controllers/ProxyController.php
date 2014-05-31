@@ -17,6 +17,7 @@ use main\models\Response;
 use models\entities\GeocodeCached;
 use models\entities\UserDevice;
 use models\entitymanagers\UserDeviceManager;
+use models\LocationUpdater;
 use models\services\LocationService;
 use models\services\ShowtimeService;
 use SystemConfig;
@@ -276,9 +277,9 @@ class ProxyController extends AppBaseController {
     public function doClean() {
         if ($this->_request->getQueryParam('skip') == 200) {
             $deleted = ShowtimeService::cleanShowdates();
-            echo "Showtimes deleted: ", $deleted, "<br/>";
+            echo "Showtimes deleted: ", $deleted, "\n";
             $cleaned = ShowtimeService::cleanPbis();
-            echo "PBI deleted: ", $cleaned, "<br/>";
+            echo "PBI deleted: ", $cleaned, "\n";
         }
         exit;
     }

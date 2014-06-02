@@ -9,7 +9,7 @@
 namespace models\services\locationproviders;
 
 use models\GeoLocation;
-use models\services\AddressLookupI;
+//use models\services\AddressLookupI;
 use models\services\LocationDistanceCheckI;
 use models\services\LocationServiceProvider;
 use models\services\ServiceError;
@@ -20,7 +20,7 @@ use SystemConfig;
  *
  * @author intelWorX
  */
-class MapQuest extends LocationServiceProvider implements LocationDistanceCheckI, AddressLookupI {
+class MapQuest extends LocationServiceProvider implements LocationDistanceCheckI/* , AddressLookupI */ {
 
     protected $apiKey;
 

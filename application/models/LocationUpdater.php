@@ -50,23 +50,32 @@ class LocationUpdater extends IdeoObject {
         SystemLogger::info("Nearbys found for update = ", count($theatreNearBys));
 
         $locationService = LocationService::instance();
-
+        $seenTheatres = array();
         $successful = 0;
         foreach ($theatreNearBys as $theatreNearBy) {
             //var_dump($theatreNearBy);exit;
             $theatre = $theatreNearBy->theatre;
             $success = false;
-            SystemLogger::info("Updating Nearby with ID ", $theatreNearBy->id, " PostalCode/ISO", $theatreNearBy->postal_code, "/", $theatreNearBy->country_iso);
+            SystemLogger::info("Updating Nearby with ID ", $theatreNearBy->id, " PostalCode/ISO", $theatreNearBy->postal_code, "/", $theatreNearBy->country_iso, "Theatre:", $theatre->name, $theatre->address);
             /* @var $theatre Theatre */
             if ($theatre) {
-                $geocodeCached = self::getGeocodeCached($theatreNearBy);
-                if ($geocodeCached) {
-                    $distance = $locationService->computeDistance($theatre->getGeocode(), $geocodeCached->getGeocode());
-                    if ($distance && $distance > 0) {
-                        $success = $theatreNearBy->update(array('distance_m' => $distance), 'id');
-                        SystemLogger::info("Distance computed as: ", $distance);
-                    } else {
-                        SystemLogger::info("Distance could not be computed");
+                if (!($theatre->latitude && $theatre->longitude) && !in_array($theatre->id, $seenTheatres)) {
+                    $seenTheatres[] = $theatre->id;
+                    if($theatre->address){
+                        self::setTheatreLatLng($theatre);
+                    }
+                }
+
+                if ($theatre->address || ($theatre->latitude && $theatre->longitude)) {
+                    $geocodeCached = self::getGeocodeCached($theatreNearBy);
+                    if ($geocodeCached) {
+                        $distance = $locationService->computeDistance($theatre->getGeocode(), $geocodeCached->getGeocode());
+                        if ($distance && $distance > 0) {
+                            $success = $theatreNearBy->update(array('distance_m' => $distance), 'id');
+                            SystemLogger::info("Distance computed as: ", $distance);
+                        } else {
+                            SystemLogger::info("Distance could not be computed");
+                        }
                     }
                 }
             }
@@ -81,9 +90,26 @@ class LocationUpdater extends IdeoObject {
         return $successful;
     }
 
+    public static function setTheatreLatLng(Theatre $theatre) {
+        //51.4752267,-0.2396438
+        \SystemLogger::info("Finding LongLat for: ", $theatre->name, $theatre->address);
+        $geocode = LocationService::instance()->addressLookup($theatre->address, array(), true);
+        $saved = false;
+        if ($geocode) {
+            $geoLocation = $geocode->getGeocode();
+            \SystemLogger::info("Found Geocode: ", strval($geoLocation));
+            $saved = $theatre->update(array(
+                'longitude' => $geoLocation->getLongitude(),
+                'latitude' => $geoLocation->getLatitude(),
+                    ), 'id');
+        }
+
+        return $saved;
+    }
+
     /**
      * 
-     * @param \models\entities\TheatreNearby $tnb
+     * @param TheatreNearby $tnb
      * @return GeocodeCached
      * 
      */

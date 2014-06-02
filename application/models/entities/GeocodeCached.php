@@ -26,6 +26,10 @@ class GeocodeCached extends StandardEntity {
         return $queryWhere;
     }
 
+    /**
+     * 
+     * @return \models\GeoLocation
+     */
     public function getGeocode() {
         $address = $this->_data['postal_code'] . ' ' . $this->_data['city'] . ', ' . $this->_data['country_iso'];
         return new \models\GeoLocation($this->_data['found_latitude'], $this->_data['found_longitude'], $address);

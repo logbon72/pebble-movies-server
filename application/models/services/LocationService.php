@@ -103,7 +103,11 @@ class LocationService extends \IdeoObject {
      * @param type $address
      * @return null|\models\entities\GeocodeCached
      */
-    public function addressLookup($address, $extraData = array()) {
+    public function addressLookup($address, $extraData = array(), $shuffle=false) {
+        if($shuffle){
+            shuffle($this->serviceProviderList);
+        }
+        
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\AddressLookupI')) {
                 /* @var $serviceProvier AddressLookupI */
@@ -175,7 +179,11 @@ class LocationService extends \IdeoObject {
         }
     }
 
-    public function computeDistance(\models\GeoLocation $source, \models\GeoLocation $destination) {
+    public function computeDistance(\models\GeoLocation $source, \models\GeoLocation $destination, $shuffle=true) {
+        if($shuffle){
+            shuffle($this->serviceProviderList);
+        }
+        
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\LocationDistanceCheckI')) {
                 /* @var $serviceProvier LocationDistanceCheckI */

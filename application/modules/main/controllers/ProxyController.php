@@ -51,7 +51,7 @@ class ProxyController extends AppBaseController {
     protected $dateOffset = 0;
     protected $result = array();
 
-    const ALLOWED_LAG = 300;
+    const ALLOWED_LAG = 4000;//300;
 
     /**
      *

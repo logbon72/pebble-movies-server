@@ -3,6 +3,7 @@
 /application/models/services/showtimeproviders/showtimes_imdb_files
 /cache/
 *.tpl.php
+/test
 /application/models/services/showtimeproviders/*.htm
 /application/models/services/showtimeproviders/*_files
 /*.html
@@ -10,3 +11,4 @@
 /testdata
 /vendor
 /.environment
+http-debug

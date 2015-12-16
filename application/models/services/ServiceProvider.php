@@ -10,11 +10,13 @@ namespace models\services;
 
 define('DEFAULT_USER_AGENT', "pbMovies LocationServiceClient 1.0 +" . BASE_URL);
 
+define('REQUESTS_LOG_DIR', APP_ROOT . 'http-debug/');
+
 /**
  * Description of ServiceProvider
  *
  * @author intelWorX
- * 
+ *
  */
 abstract class ServiceProvider extends \IdeoObject implements \ComparableInterface
 {
@@ -64,12 +66,50 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
         );
 
         $streamContext = stream_context_create($contextOpt);
-        \SystemLogger::info(get_class($this), ":", __METHOD__, "URL: ", $url);
+        \SystemLogger::debug(get_class($this), ":", __METHOD__, "URL: ", $url);
         $result = file_get_contents($url, false, $streamContext);
+        \SystemLogger::debug("response length: ", strlen($result), $http_response_header);
+
         if ($logResponse) {
-            \SystemLogger::info("Call returned: ", $result);
+            $this->logRequest($url, $result, $http_response_header);
         }
+
         return $result;
+    }
+
+    public function logRequest($url, $response, array $headers, &$file = null)
+    {
+        $contentType = 'text/html';
+        foreach ($headers as $header) {
+            if (preg_match('/^Content-Type/', $header)) {
+                //Content-Type: application/json; charset=utf-8
+                $tmp1 = preg_split('/\s*:\s*/', $header);
+                $contentType = trim(explode(';', $tmp1[1])[0]);
+                break;
+            }
+        }
+
+        if (preg_match('/html/i', $contentType)) {
+            $ext = 'html';
+        } elseif (preg_match('/json/i', $contentType)) {
+            $ext = 'json';
+        } elseif (preg_match('/xml/i', $contentType)) {
+            $ext = 'xml';
+        } else {
+            $ext = 'txt';
+        }
+
+        $uriParts = parse_url($url);
+        $fileDir = REQUESTS_LOG_DIR . $uriParts['host'] . DIRECTORY_SEPARATOR;
+        if (!is_dir($fileDir) && !mkdir($fileDir, 0755, true)) {
+            \SystemLogger::warn('Could not make directory:', $fileDir);
+            return -1;
+        }
+
+        $file = $fileDir . join('.', [preg_replace('/[^A-Za-z0-9\._\-]+/', '', $uriParts['path']), microtime(true),
+                $ext]);
+
+        return file_put_contents($file, $response);
     }
 
     protected function formatUrl($url, array $data, $encoded = false)

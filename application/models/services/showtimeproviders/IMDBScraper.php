@@ -20,38 +20,62 @@ use QueryPath\DOMQuery;
  *
  * @author intelWorX
  */
-class IMDBScraper extends ShowtimeServiceProvider {
+class IMDBScraper extends ShowtimeServiceProvider
+{
 
     const SHOWTIMES_PAGE = 'http://www.imdb.com/showtimes/{countryIso}/{postalCode}/{date}';
+    private $urlTemplate = self::SHOWTIMES_PAGE;
     //const THEATRE_LIMIT = 15;
     const MAX_RATING = 10.0;
     const MAX_METASCORE = 100.0;
 
     protected $currentDate;
-    protected $supportedCountries = array(/*"AR", */"AU", /*"CA",*/ "CL", "DE", "ES", "FR", "IT", "MX", "NZ", "PT", "US", "GB");
+    protected $supportedCountries = array(/*"AR", */
+        "AU", /*"CA",*/
+        "CL", "DE", "ES", "FR", "IT", "MX", "NZ", "PT", "US", "GB");
 
-    public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0) {
+    /**
+     * @return string
+     */
+    public function getUrlTemplate()
+    {
+        return $this->urlTemplate;
+    }
+
+    /**
+     * @param string $urlTemplate
+     */
+    public function setUrlTemplate($urlTemplate)
+    {
+        $this->urlTemplate = $urlTemplate;
+        return $this;
+    }
+
+
+    public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0)
+    {
 
         $data = array(
             'countryIso' => $geocode->country_iso,
-            'date' => \Utilities::dateFromOffset($date ? : date('Y-m-d'), $offset),
+            'date' => \Utilities::dateFromOffset($date ?: date('Y-m-d'), $offset),
             'postalCode' => urlencode($geocode->postal_code),
         );
 
 
-        $pageData = $this->callUrl($this->formatUrl(self::SHOWTIMES_PAGE, $data, true), false);
+        $pageData = $this->callUrl($this->formatUrl($this->urlTemplate, $data, true), $this->isLoggingRequests());
         //$pageData = file_get_contents(__DIR__ . DS . "showtimes.html");
         //file_put_contents("data_".microtime(true).".html", $pageData);
         $this->currentDate = $data['date'];
         return $this->extractShowtimes($pageData);
     }
 
-    protected function extractShowtimes($pageData) {
+    protected function extractShowtimes($pageData)
+    {
         $imdbPage = QueryPath::withHTML($pageData);
         \SystemLogger::debug(__CLASS__, "Extracting theatres...");
         //$cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
         $cinemasList = $imdbPage->find("#cinemas-at-list > .list_item");
-        \SystemLogger::debug(__CLASS__, "Found: ", count((array) $cinemasList));
+        \SystemLogger::debug(__CLASS__, "Found: ", count((array)$cinemasList));
         $theatreMovieShowtimes = array();
 
         if ($cinemasList) {
@@ -89,7 +113,8 @@ class IMDBScraper extends ShowtimeServiceProvider {
         return $theatreMovieShowtimes;
     }
 
-    private function extractMovies(DOMQuery $movieDomList) {
+    private function extractMovies(DOMQuery $movieDomList)
+    {
         $movieResult = array();
 
         for ($i = 1; $i < $movieDomList->count(); $i++) {
@@ -133,11 +158,13 @@ class IMDBScraper extends ShowtimeServiceProvider {
     }
 
     /**
-     * 
+     *
      * @param DOMQuery $showtimesDomList
      * @param DOMQuery $movieDom
+     * @return array
      */
-    private function extractTimes($showtimesDomList, $movieDom) {
+    private function extractTimes($showtimesDomList, $movieDom)
+    {
 
         $index = 0;
         $times = array();
@@ -163,7 +190,7 @@ class IMDBScraper extends ShowtimeServiceProvider {
                 foreach ($showtimesArr as $timeThing) {
                     if (preg_match('/(am)|(pm)/i', $timeThing)) {
                         $tmp = explode(' ', $timeThing);
-                        $lastAp = $tmp[1] ? : $lastAp;
+                        $lastAp = $tmp[1] ?: $lastAp;
                         $timeThing = $tmp[0];
                     }
 
@@ -179,7 +206,8 @@ class IMDBScraper extends ShowtimeServiceProvider {
         return $times;
     }
 
-    private function getShowtimeType($text) {
+    private function getShowtimeType($text)
+    {
         if (preg_match('/imax/i', $text)) {
             return Showtime::TYPE_IMAX;
         } elseif (preg_match('/3D/i', $text)) {

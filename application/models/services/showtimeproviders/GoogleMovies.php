@@ -9,6 +9,7 @@
 namespace models\services\showtimeproviders;
 
 use models\services\ShowtimeService;
+use QueryPath\DOMQuery;
 
 libxml_use_internal_errors(true);
 
@@ -95,12 +96,12 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
             return array();
         }
 
-        /* @var $moviePage \QueryPath\DOMQuery */
+        /* @var $moviePage DOMQuery */
         $moviePage = \QueryPath::withHTML($pageData, null, array(
             'convert_to_encoding' => "UTF-8",
             'convert_from_encoding' => "UTF-8",
         ));
-        /* @var $theatersDom \QueryPath\DOMQuery */
+        /* @var $theatersDom DOMQuery */
         $theatersDom = $moviePage->find("div.theater");
         //get total pages
         $paginationDom = $moviePage->find("#navbar td");
@@ -112,7 +113,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
         $foundTheatres = 0;
         for ($i = 0; $i < $theatersDom->length && $foundTheatres < $limit; $i++) {
             $theatre = array();
-            $theatreDom = new \QueryPath\DOMQuery($theatersDom->get($i));
+            $theatreDom = new DOMQuery($theatersDom->get($i));
             $theatre['name'] = trim($theatreDom->find("h2.name")->first()->text());
             if (!$theatre['name']) {
                 \SystemLogger::warn("Found no theatre at dom level: ", $i);
@@ -138,7 +139,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
 
     /**
      *
-     * @param \QueryPath\DOMQuery $theatreDom
+     * @param DOMQuery $theatreDom
      */
     private function extractMovieShowtimes($theatreDom)
     {
@@ -148,7 +149,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
         $movies = array();
         for ($i = 0; $i < $movieDomList->length; $i++) {
             $movie = array();
-            $moviedom = new \QueryPath\DOMQuery($movieDomList->get($i));
+            $moviedom = new DOMQuery($movieDomList->get($i));
             $title = trim($moviedom->find(".name")->first()->text());
             $showtimeType = null;
             $movie['title'] = $this->cleanTitle($title, $showtimeType);
@@ -194,7 +195,8 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
 
     /**
      *
-     * @param \QueryPath\DOMQuery $movieDom
+     * @param DOMQuery $movieDom
+     * @return array
      */
     private function extractTimes($movieDom, $showtimeType)
     {
@@ -204,7 +206,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
         $lastAp = "";
 
         for ($i = $showtimesDomList->length - 1; $i >= 0; $i--) {
-            $stDom = new \QueryPath\DOMQuery($showtimesDomList->get($i));
+            $stDom = new DOMQuery($showtimesDomList->get($i));
             $showtime = array();
             $timeSpan = preg_replace("/[^a-z0-9:]/", "", trim($stDom->find("span")->first()->text()));
             $matches = array();

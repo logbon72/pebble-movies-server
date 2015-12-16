@@ -54,7 +54,7 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
         }
     }
 
-    protected function callUrl($url, $logResponse = true)
+    protected function callUrl($url, $logResponse = null)
     {
         $contextOpt = array(
             'http' => array(
@@ -69,6 +69,10 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
         \SystemLogger::debug(get_class($this), ":", __METHOD__, "URL: ", $url);
         $result = file_get_contents($url, false, $streamContext);
         \SystemLogger::debug("response length: ", strlen($result), $http_response_header);
+
+        if ($logResponse === null) {
+            $logResponse = $this->isLoggingRequests();
+        }
 
         if ($logResponse) {
             $this->logRequest($url, $result, $http_response_header);
@@ -121,4 +125,8 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
         return $url;
     }
 
+    protected function isLoggingRequests()
+    {
+        return !!\SystemConfig::getInstance()->service['log_requests'];
+    }
 }

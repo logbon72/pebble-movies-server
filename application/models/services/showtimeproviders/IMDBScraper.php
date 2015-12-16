@@ -77,7 +77,7 @@ class IMDBScraper extends ShowtimeServiceProvider
         );
 
 
-        $pageData = $this->callUrl($this->formatUrl($this->urlTemplate, $data, true), $this->isLoggingRequests());
+        $pageData = $this->callUrl($this->formatUrl($this->urlTemplate, $data, true));
         //$pageData = file_get_contents(__DIR__ . DS . "showtimes.html");
         //file_put_contents("data_".microtime(true).".html", $pageData);
         $this->currentDate = $data['date'];

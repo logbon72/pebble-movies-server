@@ -75,7 +75,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
             );
 
             $url = $this->formatUrl($this->showtimesUrl, $data, true);
-            $pageData = $this->callUrl($url, $this->isLoggingRequests());
+            $pageData = $this->callUrl($url);
             //test if hasNextPage===
             $totalFound = count($allCinemasFound);
             $totalPages = 0;

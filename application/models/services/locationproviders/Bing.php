@@ -40,7 +40,7 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
             'apiKey' => $this->apiKey,
         );
 
-        $result = $this->callUrl($this->formatUrl(self::URL_ROUTE, $data, false), false);
+        $result = $this->callUrl($this->formatUrl(self::URL_ROUTE, $data, false));
         $resultDecoded = json_decode($result, true);
         if ($this->checkError($resultDecoded)) {
             return -1;
@@ -57,7 +57,7 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
             'apiKey' => $this->apiKey,
         );
 
-        $result = $this->callUrl($this->formatUrl(self::URL_ADDRESS, $data), true);
+        $result = $this->callUrl($this->formatUrl(self::URL_ADDRESS, $data));
         $resultDecoded = json_decode($result, true);
         if ($this->checkError($resultDecoded)) {
             return null;

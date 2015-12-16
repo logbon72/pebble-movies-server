@@ -42,7 +42,7 @@ class MapQuest extends LocationServiceProvider implements LocationDistanceCheckI
         );
 
         $url = $this->formatUrl(self::URL_DISTANCE_LOOKUP, $data, true);
-        $apiResult = json_decode($this->callUrl($url, false), true);
+        $apiResult = json_decode($this->callUrl($url), true);
         if ($this->hasError($apiResult, false)) {
             return null;
         }
@@ -66,7 +66,7 @@ class MapQuest extends LocationServiceProvider implements LocationDistanceCheckI
         );
 
         $url = $this->formatUrl(self::URL_ADDRESS_LOOKUP, $data, true);
-        $apiResult = json_decode($this->callUrl($url, false), true);
+        $apiResult = json_decode($this->callUrl($url), true);
         if ($this->hasError($apiResult)) {
             return null;
         }
@@ -101,7 +101,7 @@ class MapQuest extends LocationServiceProvider implements LocationDistanceCheckI
         );
 
         $url = $this->formatUrl(self::URL_LATLNG_LOOKUP, $data, true);
-        $apiResult = json_decode($this->callUrl($url, false), true);
+        $apiResult = json_decode($this->callUrl($url), true);
         if ($this->hasError($apiResult)) {
             return null;
         }

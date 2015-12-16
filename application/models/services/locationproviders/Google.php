@@ -38,9 +38,9 @@ class Google extends LocationServiceProvider implements AddressLookupI {
     }
 
     /**
-     * 
+     *
      * @param type $address
-     * 
+     *
      * @return LookupResult result
      */
     public function addressLookup($address) {
@@ -50,7 +50,7 @@ class Google extends LocationServiceProvider implements AddressLookupI {
         );
 
         $url = $this->formatUrl(self::URL_ADDRESS_LOOKUP, $data);
-        $apiResult = json_decode($this->callUrl($url, false), true);
+        $apiResult = json_decode($this->callUrl($url), true);
         if (!$this->hasError($apiResult)) {
             return $this->convertToLookUpResult($apiResult['results'][0]);
         }
@@ -107,7 +107,7 @@ class Google extends LocationServiceProvider implements AddressLookupI {
         );
 
         $url = $this->formatUrl(self::URL_LATLNG_LOOKUP, $data);
-        $apiResult = json_decode($this->callUrl($url, false), true);
+        $apiResult = json_decode($this->callUrl($url), true);
         if (!$this->hasError($apiResult)) {
             return $this->convertToLookUpResult($apiResult['results'][0]);
         }

@@ -10,6 +10,9 @@ Header set Access-Control-Allow-Methods POST,GET,OPTIONS env=REDIRECT_API
 Header set Access-Control-Allow-Headers X-Authorization,X-Requested-With,Authorization env=REDIRECT_API
 Header set Access-Control-Allow-Credentials true env=REDIRECT_API
 
+#Prevent Access to Hidden files
+RewriteRule (^\.|/\.) - [F]
+
 #RewriteRule ^(.*)$ maintenance.html [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

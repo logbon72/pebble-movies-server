@@ -57,9 +57,4 @@ abstract class ShowtimeServiceProvider extends ServiceProvider
         return $this->supportedCountries;
     }
 
-    protected function isLoggingRequests()
-    {
-        return !!\SystemConfig::getInstance()->service['log_requests'];
-    }
-
 }

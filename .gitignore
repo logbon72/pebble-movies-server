@@ -4,6 +4,7 @@
 /cache/
 *.tpl.php
 /test
+/.environment.prod
 /application/models/services/showtimeproviders/*.htm
 /application/models/services/showtimeproviders/*_files
 /*.html

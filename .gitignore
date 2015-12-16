@@ -10,5 +10,6 @@
 /*.html
 /*_files
 /testdata
+/vendor
 /.environment
 http-debug

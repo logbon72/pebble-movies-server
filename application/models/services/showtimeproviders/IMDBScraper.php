@@ -14,7 +14,6 @@ use models\services\ShowtimeService;
 use models\services\ShowtimeServiceProvider;
 use QueryPath;
 use QueryPath\DOMQuery;
-use SystemLogger;
 
 /**
  * Description of IMDBScraper
@@ -49,10 +48,10 @@ class IMDBScraper extends ShowtimeServiceProvider {
 
     protected function extractShowtimes($pageData) {
         $imdbPage = QueryPath::withHTML($pageData);
-        SystemLogger::debug(__CLASS__, "Extracting theatres...");
+        \SystemLogger::debug(__CLASS__, "Extracting theatres...");
         //$cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
         $cinemasList = $imdbPage->find("#cinemas-at-list > .list_item");
-        SystemLogger::debug(__CLASS__, "Found: ", count((array) $cinemasList));
+        \SystemLogger::debug(__CLASS__, "Found: ", count((array) $cinemasList));
         $theatreMovieShowtimes = array();
 
         if ($cinemasList) {
@@ -61,9 +60,9 @@ class IMDBScraper extends ShowtimeServiceProvider {
                 $cinemaDiv = new DOMQuery($cinemasList->get($i));
                 $theatreData = array();
                 $theatreTitle = $cinemaDiv->find('h3')->first();
-                SystemLogger::info("{$i}. Theatre: ", $theatreTitle->text());
+                \SystemLogger::info("{$i}. Theatre: ", $theatreTitle->text());
                 if (!$theatreTitle) {
-                    SystemLogger::debug(__CLASS__, "No theatre found");
+                    \SystemLogger::debug(__CLASS__, "No theatre found");
                     continue;
                 }
 
@@ -74,9 +73,9 @@ class IMDBScraper extends ShowtimeServiceProvider {
                 $addressSpan = $addressSpanTmp ? preg_replace('/\s+/', ' ', $addressSpanTmp->text()) : "";
                 $theatreData['address'] = trim(explode('|', $addressSpan)[0]);
                 $movieDomList = $cinemaDiv->find('.list_item');
-                SystemLogger::info(__CLASS__, "Number of Movie: ", count($movieDomList));
+                \SystemLogger::info(__CLASS__, "Number of Movie: ", count($movieDomList));
                 if (!count($movieDomList)) {
-                    SystemLogger::debug(__CLASS__, "No movies found");
+                    \SystemLogger::debug(__CLASS__, "No movies found");
                     continue;
                 }
 

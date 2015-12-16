@@ -1,0 +1,7 @@
+CONFIG=dev
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=username
+DB_PASSWORD=password
+DB_NAME=localhost
+GOOGLE_API_KEY=---API-KEY-FOR-MAPS---

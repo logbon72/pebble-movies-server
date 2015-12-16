@@ -8,7 +8,6 @@
 
 namespace main\controllers;
 
-use ClientHttpRequest;
 use controllers\AppBaseController;
 use main\models\ApiError;
 use main\models\ProxyMode;
@@ -17,11 +16,8 @@ use main\models\Response;
 use models\entities\GeocodeCached;
 use models\entities\UserDevice;
 use models\entitymanagers\UserDeviceManager;
-use models\LocationUpdater;
 use models\services\LocationService;
 use models\services\ShowtimeService;
-use SystemConfig;
-use SystemLogger;
 
 /**
  * Description of ProxyController
@@ -68,14 +64,14 @@ class ProxyController extends AppBaseController {
     protected $userVersion;
 
     /**
-     * 
-     * 
-     * @param ClientHttpRequest $req
+     *
+     *
+     * @param \ClientHttpRequest $req
      */
     public function __construct($req) {
         $this->response = new Response();
         $req->addHook(new RequestLogger(), 1000);
-        $this->currentVersion = doubleval(SystemConfig::getInstance()->system['current_version']);
+        $this->currentVersion = doubleval(\SystemConfig::getInstance()->system['current_version']);
         $this->userVersion = doubleval($req->getQueryParam('version'));
         parent::__construct($req);
         $this->showtimeService = ShowtimeService::instance();
@@ -85,7 +81,7 @@ class ProxyController extends AppBaseController {
         $token = $this->_request->getQueryParam('token');
         $this->userDevice = UserDeviceManager::validate($token, $this->requestId);
         $action = $this->_request->getAction();
-        $testMode = /* !\Application::currentInstance()->isProd() && */ $this->_request->getQueryParam('skip') == 1;
+        $testMode = !\Application::currentInstance()->isProd() && $this->_request->getQueryParam('skip') == 1;
         if (!$this->userDevice && !$testMode && !in_array($action, $this->skipAuths)) {
             $this->response->forbidden();
             $this->response->addError(new ApiError("FORBIDDEN", "Access denied"));
@@ -164,7 +160,7 @@ class ProxyController extends AppBaseController {
         $version = $this->currentVersion;
         if ($this->geocode) {
             $status = $this->showtimeService->loadData($this->geocode, $this->currentDate, false, $this->dateOffset);
-            SystemLogger::info("PreloadStatus: ", $status);
+            \SystemLogger::info("PreloadStatus: ", $status);
         }
         $this->result['status'] = $status;
         $this->result['version'] = $version;

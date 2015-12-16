@@ -1,13 +1,14 @@
 {
-    "name": "intelworx/pbmovies",
-    "description": "Description of project pbmovies.",
-    "authors": [
-        {
-            "name": "Joseph Orilogbon",
-            "email": "logbon72@gmail.com"
-        }
-    ],
-    "require": {
-        "querypath/querypath": "dev-master"
+  "name": "intelworx/pbmovies",
+  "description": "Description of project pbmovies.",
+  "authors": [
+    {
+      "name": "Joseph Orilogbon",
+      "email": "logbon72@gmail.com"
     }
+  ],
+  "require": {
+    "querypath/querypath": "~3.0.0",
+    "intelworx/ideo-framework": "dev-master"
+  }
 }

@@ -13,10 +13,12 @@ namespace models\entities;
  *
  * @author intelWorX
  */
-class UserDevice extends \Entity{
+class UserDevice extends \Entity
+{
     //put your code here
-    protected function initRelations() {
+    protected function initRelations()
+    {
         $this->setOneToMany('requests', \models\entitymanagers\UserDeviceReqManager::instance(), 'created_on DESC');
     }
-    
+
 }

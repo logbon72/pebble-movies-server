@@ -15,16 +15,14 @@ use models\services\LocationService;
  *
  * @author intelWorX
  */
-class TheatreNearby extends StandardEntity {
+class TheatreNearby extends StandardEntity
+{
 
     //put your code here
-    protected function initRelations() {
-        $this->setManyToOne('theatre', Theatre::manager());
-    }
-
-    public static function getOrCreate(GeocodeCached $locationInfo, Theatre $theatre, $computeDistance = false) {
+    public static function getOrCreate(GeocodeCached $locationInfo, Theatre $theatre, $computeDistance = false)
+    {
         $where = $locationInfo->getQueryWhere()
-                ->where('theatre_id', $theatre->id);
+            ->where('theatre_id', $theatre->id);
 
         $manager = static::manager();
         $nearby = $manager->getEntityWhere($where);
@@ -37,6 +35,11 @@ class TheatreNearby extends StandardEntity {
         $data['theatre_id'] = $theatre->id;
         $nearbyId = $manager->createEntity($data)->save();
         return $nearbyId ? $manager->getEntity($nearbyId) : null;
+    }
+
+    protected function initRelations()
+    {
+        $this->setManyToOne('theatre', Theatre::manager());
     }
 
 }

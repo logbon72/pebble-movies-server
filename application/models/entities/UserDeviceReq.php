@@ -13,9 +13,11 @@ namespace models\entities;
  *
  * @author intelWorX
  */
-class UserDeviceReq extends \Entity{
-    
-    protected function initRelations() {
+class UserDeviceReq extends \Entity
+{
+
+    protected function initRelations()
+    {
         $this->setManyToOne('user_device', \models\entitymanagers\UserDeviceManager::instance());
     }
 }

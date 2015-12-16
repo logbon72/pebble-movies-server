@@ -13,9 +13,9 @@ namespace models\entitymanagers;
  *
  * @author intelWorX
  */
-class UserDeviceReqManager extends AppEntityManager {
+class UserDeviceReqManager extends \GenericEntityManager
+{
     //put your code here
-    
-    
-    
+
+
 }

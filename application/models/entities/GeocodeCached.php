@@ -7,15 +7,18 @@
  */
 
 namespace models\entities;
+use models\GeoLocation;
 
 /**
  * Description of GeocodeCached
  *
  * @author intelWorX
  */
-class GeocodeCached extends StandardEntity {
+class GeocodeCached extends StandardEntity
+{
 
-    public function getQueryWhere() {
+    public function getQueryWhere()
+    {
         $queryWhere = new \DbTableWhere();
         $queryWhere->where('country_iso', $this->_data['country_iso']);
         if ($this->_data['postal_code']) {
@@ -27,15 +30,17 @@ class GeocodeCached extends StandardEntity {
     }
 
     /**
-     * 
-     * @return \models\GeoLocation
+     *
+     * @return GeoLocation
      */
-    public function getGeocode() {
+    public function getGeocode()
+    {
         $address = $this->_data['postal_code'] . ' ' . $this->_data['city'] . ', ' . $this->_data['country_iso'];
-        return new \models\GeoLocation($this->_data['found_latitude'], $this->_data['found_longitude'], $address);
+        return new GeoLocation($this->_data['found_latitude'], $this->_data['found_longitude'], $address);
     }
 
-    public function setLastUpdated($date = null) {
+    public function setLastUpdated($date = null)
+    {
         $dateTs = strtotime($date);
 
         $date = $dateTs ? date('Y-m-d', $dateTs) : new \DbTableFunction("CURRENT_DATE");
@@ -43,8 +48,8 @@ class GeocodeCached extends StandardEntity {
         $data = array();
         copyElementsAtKey(array('country_iso', 'postal_code', 'city'), $this->_data, $data);
         $newData = $data + array(
-            'load_date' => $date
-        );
+                'load_date' => $date
+            );
         return GeocodeLoaded::manager()->createEntity($newData)->save();
 //        return GeocodeLoaded::table()->insert();
     }

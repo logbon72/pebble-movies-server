@@ -13,6 +13,7 @@ namespace models\entities;
  *
  * @author intelWorX
  */
-class GeocodeLoaded extends StandardEntity {
+class GeocodeLoaded extends StandardEntity
+{
     //put your code here
 }

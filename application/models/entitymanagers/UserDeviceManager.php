@@ -13,9 +13,11 @@ namespace models\entitymanagers;
  *
  * @author intelWorX
  */
-class UserDeviceManager extends AppEntityManager {
+class UserDeviceManager extends \GenericEntityManager
+{
 
-    public static function register($device_uuid) {
+    public static function register($device_uuid)
+    {
         $parts = explode(" ", microtime());
 
         $data = array(
@@ -25,17 +27,18 @@ class UserDeviceManager extends AppEntityManager {
         );
 
         $inserted = static::instance()->createEntity($data)
-                ->save();
+            ->save();
 
         return $inserted ? static::instance()->getEntity($data['id']) : null;
     }
 
     /**
-     * 
+     *
      * @param string $token format requestId|deviceId|sign=sha1(requestId.deviceId.secretKey)
      * @return \models\entities\UserDevice current device represented by token.
      */
-    public static function validate($token, &$requestId, $verifySign = true) {
+    public static function validate($token, &$requestId, $verifySign = true)
+    {
         list($requestId, $deviceId, $sign) = explode('|', $token);
         if (!($requestId && $deviceId && $sign)) {
             return null;
@@ -55,19 +58,20 @@ class UserDeviceManager extends AppEntityManager {
             }
 
             $tableWhere = (new \DbTableWhere())->where('user_device_id', $userDevice->id)
-                    ->where('request_id', $requestId)
-                    ->setLimitAndOffset(1);
-            
+                ->where('request_id', $requestId)
+                ->setLimitAndOffset(1);
+
             if (count(UserDeviceReqManager::instance()->getEntitiesWhere($tableWhere))) {
                 \SystemLogger::warn("duplicate request id: ", $requestId);
                 return null;
             }
         }
-        
+
         return $userDevice;
     }
 
-    public static function sign($requestId, $deviceId, $secretKey) {
+    public static function sign($requestId, $deviceId, $secretKey)
+    {
         return sha1($requestId . $deviceId . $secretKey);
     }
 

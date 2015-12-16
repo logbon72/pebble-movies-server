@@ -27,7 +27,7 @@ class LocationService extends \IdeoObject {
 
     /**
      *
-     * @var \models\entitymanagers\StandardEntityManager
+     * @var \ModelEntityManager
      */
     protected $geocodeCachedManager;
 

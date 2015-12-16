@@ -13,23 +13,15 @@ namespace models\entities;
  *
  * @author intelWorX
  */
-class Theatre extends StandardEntity {
+class Theatre extends StandardEntity
+{
 
-    protected function initRelations() {
-        $this->setOneToMany('nearbys', TheatreNearby::manager(), 'distance_m')
-                ->setOneToMany('showtimes', Showtime::manager(), 'show_date DESC, show_time ASC');
-    }
-
-    public function getMoviesShowing() {
-        throw new \RuntimeException("Yet to implement");
-    }
-
-    public static function getOrCreate($theatreData, $locationInfo = null, $lookUpAddress = false, $computeDistance=false) {
+    public static function getOrCreate($theatreData, $locationInfo = null, $lookUpAddress = false, $computeDistance = false)
+    {
         $manager = self::manager();
         $findWhere = (new \DbTableWhere())
-                ->where('name', $theatreData['name'])
-                ->where('address', $theatreData['address'])
-        ;
+            ->where('name', $theatreData['name'])
+            ->where('address', $theatreData['address']);
         if (($foundTheatre = $manager->getEntityWhere($findWhere))) {
             TheatreNearby::getOrCreate($locationInfo, $foundTheatre);
             return $foundTheatre;
@@ -49,22 +41,29 @@ class Theatre extends StandardEntity {
             TheatreNearby::getOrCreate($locationInfo, $theatre, $computeDistance);
             return $theatre;
         }
-        
+
         return null;
     }
 
-    public function getGeocode() {
+    public function getMoviesShowing()
+    {
+        throw new \RuntimeException("Yet to implement");
+    }
+
+    public function getGeocode()
+    {
         return new \models\GeoLocation($this->_data['latitude'], $this->_data['longitude'], $this->_data['address']);
     }
 
     /**
-     * 
+     *
      * @param int $movie_id
      * @param string $date
      * @param string|\DbTableFunction $order
      * @return Showtime[]
      */
-    public function getShowtimes($movie_id = null, $date = null, $order = null) {
+    public function getShowtimes($movie_id = null, $date = null, $order = null)
+    {
         $showtimesWhere = new \DbTableWhere();
         if ($movie_id) {
             $showtimesWhere->where('movie_id', $movie_id);
@@ -77,11 +76,17 @@ class Theatre extends StandardEntity {
         if (!$order) {
             $order = new \DbTableFunction('type,show_date,show_time');
         }
-        
+
         $showtimesWhere->setOrderBy($order)
-                ->where('theatre_id', $this->_data['id']);
-        
+            ->where('theatre_id', $this->_data['id']);
+
         return Showtime::manager()->getEntitiesWhere($showtimesWhere);
+    }
+
+    protected function initRelations()
+    {
+        $this->setOneToMany('nearbys', TheatreNearby::manager(), 'distance_m')
+            ->setOneToMany('showtimes', Showtime::manager(), 'show_date DESC, show_time ASC');
     }
 
 }

@@ -25,7 +25,6 @@ use models\entities\Movie;
 use models\entities\Showtime;
 use models\entities\Theatre;
 use models\entities\TheatreNearby;
-use models\entitymanagers\StandardEntityManager;
 use QRcode;
 use SystemConfig;
 use SystemLogger;
@@ -47,7 +46,7 @@ class ShowtimeService extends IdeoObject {
 
     /**
      *
-     * @var StandardEntityManager
+     * @var \ModelEntityManager
      */
     protected $showtimeManager;
 
@@ -55,13 +54,13 @@ class ShowtimeService extends IdeoObject {
 
     /**
      *
-     * @var StandardEntityManager
+     * @var \ModelEntityManager
      */
     protected $theatreManager;
 
     /**
      *
-     * @var StandardEntityManager
+     * @var \ModelEntityManager
      */
     protected $theatreNearByManager;
 

@@ -8,22 +8,32 @@
 
 namespace models\services\showtimeproviders;
 
+use models\services\ShowtimeService;
+
+libxml_use_internal_errors(true);
+
 /**
  * Description of GoogleMovies
  *
  * @author intelworx
  */
-class GoogleMovies extends \models\services\ShowtimeServiceProvider {
+class GoogleMovies extends \models\services\ShowtimeServiceProvider
+{
 
     const SHOWTIMES_PAGE = 'http://www.google.com/movies?near={latlng}&date={date}&start={start}';
+    const BASE_DOMAIN = 'http://www.google.com';
+
     //const SHOWTIMES_PAGE = 'google_movies{start}.html';
     const PER_PAGE = 10;
     const MAX_PAGES = 2;
 
     protected $currentDate;
 
+    private $showtimesUrl = self::SHOWTIMES_PAGE;
+
     //put your code here
-    public function __construct() {
+    public function __construct()
+    {
 
         $this->supportedCountries = array(
             "AR",
@@ -50,7 +60,8 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
         $this->priority = 10000;
     }
 
-    public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null, $offset = 0) {
+    public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null, $offset = 0)
+    {
 
         $this->currentDate = \Utilities::dateFromOffset($date, $offset);
         $allCinemasFound = array();
@@ -59,15 +70,15 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
                 'latlng' => $geocode->getGeocode(),
                 'date' => $offset,
                 'start' => $i * self::PER_PAGE,
-                    //'page' => $i+1,
+                //'page' => $i+1,
             );
 
-            $url = $this->formatUrl(self::SHOWTIMES_PAGE, $data, true);
-            $pageData = $this->callUrl($url, false);
+            $url = $this->formatUrl($this->showtimesUrl, $data, true);
+            $pageData = $this->callUrl($url, $this->isLoggingRequests());
             //test if hasNextPage===
             $totalFound = count($allCinemasFound);
             $totalPages = 0;
-            $allCinemasFound = array_merge($allCinemasFound, $this->extractTheatreMovieShowtimes($pageData, \models\services\ShowtimeService::THEATRE_LIMIT - $totalFound, $totalPages));
+            $allCinemasFound = array_merge($allCinemasFound, $this->extractTheatreMovieShowtimes($pageData, ShowtimeService::THEATRE_LIMIT - $totalFound, $totalPages));
             \SystemLogger::info("Total pages: ", $totalPages);
             if ($i >= $totalPages - 1) {
                 break;
@@ -77,7 +88,8 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
         return $allCinemasFound;
     }
 
-    private function extractTheatreMovieShowtimes($pageData, $limit, &$totalPages) {
+    private function extractTheatreMovieShowtimes($pageData, $limit, &$totalPages)
+    {
         if ($limit <= 0) {
             \SystemLogger::warn("Invalid limit was supplied: ", $limit);
             return array();
@@ -85,8 +97,8 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
 
         /* @var $moviePage \QueryPath\DOMQuery */
         $moviePage = \QueryPath::withHTML($pageData, null, array(
-                    'convert_to_encoding' => "UTF-8",
-                    'convert_from_encoding' => "UTF-8",
+            'convert_to_encoding' => "UTF-8",
+            'convert_from_encoding' => "UTF-8",
         ));
         /* @var $theatersDom \QueryPath\DOMQuery */
         $theatersDom = $moviePage->find("div.theater");
@@ -125,10 +137,11 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
     }
 
     /**
-     * 
+     *
      * @param \QueryPath\DOMQuery $theatreDom
      */
-    private function extractMovieShowtimes($theatreDom) {
+    private function extractMovieShowtimes($theatreDom)
+    {
 
         $movieDomList = $theatreDom->find(".movie");
 
@@ -171,7 +184,8 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
         return $movies;
     }
 
-    private function strToRuntime($str) {
+    private function strToRuntime($str)
+    {
         if (preg_match('/(hr)|(min)/', $str)) {
             return (strtotime("+" . preg_replace(array("/hr/", "/[^0-9a-z]/i"), array("hour", ""), $str)) - time()) / 60;
         }
@@ -179,10 +193,11 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
     }
 
     /**
-     * 
+     *
      * @param \QueryPath\DOMQuery $movieDom
      */
-    private function extractTimes($movieDom, $showtimeType) {
+    private function extractTimes($movieDom, $showtimeType)
+    {
         $times = array();
         $showtimesDomList = $movieDom->find(".times > span");
 
@@ -204,7 +219,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
             $showtime['type'] = $showtimeType;
             $ticketUrl = $stDom->find("a");
             if ($ticketUrl->length > 0) {
-                $showtime['url'] = $ticketUrl->first()->attr('href');
+                $showtime['url'] = $this->extractUrl($ticketUrl->first()->attr('href'));
             } else {
                 $showtime['url'] = "";
             }
@@ -213,7 +228,20 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
         return $times;
     }
 
-    private function cleanTitle($title, &$showtimeType) {
+    private function extractUrl($url)
+    {
+        if (preg_match('/^https?:\/\//', $url)) {
+            return $url;
+        } else {
+            $q = parse_url($url, PHP_URL_QUERY);
+            parse_str($q, $decoded);
+            return isset($decoded['q']) ? $decoded['q'] : self::BASE_DOMAIN . $url;
+        }
+    }
+
+
+    private function cleanTitle($title, &$showtimeType)
+    {
         $title = trim($title);
         $patterns3D = "/(3d\))|(\s*3d$)/i";
         if (preg_match($patterns3D, $title)) {
@@ -230,5 +258,25 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider {
         $showtimeType = \models\entities\Showtime::TYPE_2D;
         return $title;
     }
+
+    /**
+     * @return string
+     */
+    public function getShowtimesUrl()
+    {
+        return $this->showtimesUrl;
+    }
+
+    /**
+     * @param string $showtimesUrl
+     *
+     * @return $this
+     */
+    public function setShowtimesUrl($showtimesUrl)
+    {
+        $this->showtimesUrl = $showtimesUrl;
+        return $this;
+    }
+
 
 }

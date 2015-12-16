@@ -15,6 +15,8 @@ use models\services\ShowtimeServiceProvider;
 use QueryPath;
 use QueryPath\DOMQuery;
 
+libxml_use_internal_errors(true);
+
 /**
  * Description of IMDBScraper
  *
@@ -30,9 +32,22 @@ class IMDBScraper extends ShowtimeServiceProvider
     const MAX_METASCORE = 100.0;
 
     protected $currentDate;
-    protected $supportedCountries = array(/*"AR", */
-        "AU", /*"CA",*/
-        "CL", "DE", "ES", "FR", "IT", "MX", "NZ", "PT", "US", "GB");
+
+    protected $supportedCountries = [
+        /*"AR", */
+        "AU",
+        /*"CA",*/
+        "CL",
+        "DE",
+        "ES",
+        "FR",
+        "IT",
+        "MX",
+        "NZ",
+        "PT",
+        "US",
+        "GB"
+    ];
 
     /**
      * @return string
@@ -71,7 +86,7 @@ class IMDBScraper extends ShowtimeServiceProvider
 
     protected function extractShowtimes($pageData)
     {
-        $imdbPage = QueryPath::withHTML($pageData);
+        $imdbPage = QueryPath::withHTML5($pageData);
         \SystemLogger::debug(__CLASS__, "Extracting theatres...");
         //$cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
         $cinemasList = $imdbPage->find("#cinemas-at-list > .list_item");
@@ -125,7 +140,6 @@ class IMDBScraper extends ShowtimeServiceProvider
             if (!$titledom) {
                 continue;
             }
-
 
             $movieData['title'] = preg_replace('/\s+\(\d\d\d\d\)$/', '', trim($titledom->text()));
 

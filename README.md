@@ -1,4 +1,4 @@
-# pebble-movies-server
+# Pebble Movies Data Server
 
 Source Code for Pebble Movies, Movie Showtimes software for Pebble.
 

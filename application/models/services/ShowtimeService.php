@@ -8,15 +8,10 @@
 
 namespace models\services;
 
-include_once LIB_DIR . 'phpqrcode/qrlib.php';
-include_once LIB_DIR . 'bitlyapi/Bitly.php';
+require_once LIB_DIR . 'bitlyapi/Bitly.php';
 
 use Bitly;
-use DbTableFunction;
-use DbTableWhere;
 use DirectoryIterator;
-use IdeoObject;
-use ImageConverter;
 use InvalidArgumentException;
 use main\models\ProxyMode;
 use models\entities\GeocodeCached;
@@ -25,9 +20,7 @@ use models\entities\Movie;
 use models\entities\Showtime;
 use models\entities\Theatre;
 use models\entities\TheatreNearby;
-use QRcode;
-use SystemConfig;
-use SystemLogger;
+use PHPQRCode\QRcode;
 use Utilities;
 
 /**
@@ -35,7 +28,8 @@ use Utilities;
  *
  * @author intelWorX
  */
-class ShowtimeService extends IdeoObject {
+class ShowtimeService extends \IdeoObject
+{
     //put your code here
 
     /**
@@ -74,11 +68,12 @@ class ShowtimeService extends IdeoObject {
      *
      * @var ShowtimeServiceProvider[]
      */
-    protected $serviceProviderList = array();
+    protected $serviceProviderList = [];
 
     const THEATRE_LIMIT = 15;
 
-    private function __construct() {
+    private function __construct()
+    {
         //load providers
         $serviceProvidersDir = __DIR__ . DS . 'showtimeproviders';
         $directoryIterator = new DirectoryIterator($serviceProvidersDir);
@@ -104,7 +99,8 @@ class ShowtimeService extends IdeoObject {
         $this->theatreNearByManager = TheatreNearby::manager();
     }
 
-    public function dataLoaded(GeocodeCached $locationInfo, $date = null) {
+    public function dataLoaded(GeocodeCached $locationInfo, $date = null)
+    {
         $queryWhere = $locationInfo->getQueryWhere();
         if ($date) {
             $queryWhere->where('load_date', $date);
@@ -116,11 +112,12 @@ class ShowtimeService extends IdeoObject {
     /**
      * Fetches data for the showtimes for the soecified info.
      * @param GeocodeCached $locationInfo
-     * @param type $date
-     * @param type $forceReload
+     * @param string $date
+     * @param bool $forceReload
      * @return boolean
      */
-    public function loadData(GeocodeCached $locationInfo, $date = null, $forceReload = false, $dateOffset = 0) {
+    public function loadData(GeocodeCached $locationInfo, $date = null, $forceReload = false, $dateOffset = 0)
+    {
         if (!$date) {
             $date = date('Y-m-d');
         }
@@ -132,7 +129,7 @@ class ShowtimeService extends IdeoObject {
         }
 
         set_time_limit(0);
-        $results = array();
+        $results = [];
 
         foreach ($this->serviceProviderList as $serviceProvider) {
             if ($serviceProvider->supports($locationInfo)) {
@@ -149,12 +146,13 @@ class ShowtimeService extends IdeoObject {
     }
 
     /**
-     * 
+     *
      * @param array $results
      * @param GeocodeCached $locationInfo
      * @return int number of cached results
      */
-    protected function cacheResult($results, $locationInfo, $date) {
+    protected function cacheResult($results, $locationInfo, $date)
+    {
         $return = 0;
         foreach ($results as $theatreMovieShowtime) {
             $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre'], $locationInfo);
@@ -166,7 +164,7 @@ class ShowtimeService extends IdeoObject {
                     }
                 }
             } else {
-                SystemLogger::warn("Could not create theatre with data: ", $theatreMovieShowtime['theatre']);
+                \SystemLogger::warn("Could not create theatre with data: ", $theatreMovieShowtime['theatre']);
             }
         }
 
@@ -175,7 +173,8 @@ class ShowtimeService extends IdeoObject {
         return $return;
     }
 
-    protected function cacheShowtimes(Theatre $theatre, Movie $movie, $showtimes) {
+    protected function cacheShowtimes(Theatre $theatre, Movie $movie, $showtimes)
+    {
         if (empty($showtimes)) {
             return 0;
         }
@@ -185,13 +184,12 @@ class ShowtimeService extends IdeoObject {
             $showtimes[$k]['movie_id'] = $movie->id;
         }
 
-        $queryWhere = (new DbTableWhere())
-                ->where('show_date', $showtime['show_date'])
-                ->where('show_time', $showtime['show_time'])
-                ->where('theatre_id', $theatre->id)
-                ->where('movie_id', $movie->id)
-                ->where('type', $showtime['type'])
-        ;
+        $queryWhere = \DbTableWhere::get()
+            ->where('show_date', $showtime['show_date'])
+            ->where('show_time', $showtime['show_time'])
+            ->where('theatre_id', $theatre->id)
+            ->where('movie_id', $movie->id)
+            ->where('type', $showtime['type']);
 
         if (Showtime::manager()->getEntityWhere($queryWhere)) {
             \SystemLogger::info("Show times have already been cached.");
@@ -200,7 +198,7 @@ class ShowtimeService extends IdeoObject {
 
         try {
             $inserted = Showtime::table()
-                    ->insert($showtimes, true, true);
+                ->insert($showtimes, true, true);
         } catch (\Exception $e) {
             \SystemLogger::info("Could not save showtime, possible duplicate, error message: ", $e->getMessage());
             $inserted = 0;
@@ -209,15 +207,15 @@ class ShowtimeService extends IdeoObject {
         return $inserted;
     }
 
-    public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null, $dateOffset = 0) {
+    public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null, $dateOffset = 0)
+    {
         if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
-            return array();
+            return [];
         }
 
         $currentDate = Utilities::dateFromOffset($currentDate, $dateOffset);
         $where = $locationInfo->getQueryWhere()
-                ->where('s.show_date', $currentDate)
-        ;
+            ->where('s.show_date', $currentDate);
 
         if ($theatre_id) {
             $where->where('s.theatre_id', $theatre_id);
@@ -227,31 +225,30 @@ class ShowtimeService extends IdeoObject {
             $where->where('s.movie_id', $movie_id);
         }
 
-        $idsIn = Showtime::table()->selectFrom(array('s.id'), 's')
-                ->innerJoin(array('tn' => TheatreNearby::table()), "tn.theatre_id=s.theatre_id")
-                ->where($where)
-                ->generateSQL()
-        ;
+        $idsIn = Showtime::table()->selectFrom(['s.id'], 's')
+            ->innerJoin(['tn' => TheatreNearby::table()], "tn.theatre_id=s.theatre_id")
+            ->where($where)
+            ->generateSQL();
         //array('id', 'show_time', 'show_date', 'url');
-        $showtimeWhere = (new DbTableWhere())
-                ->whereInSql('id', $idsIn)
-                ->setOrderBy("theatre_id")
-                ->setOrderBy("movie_id")
-                ->setOrderBy("show_date")
-                ->setOrderBy("show_time")
-                ->setOrderBy("type");
+        $showtimeWhere = (new \DbTableWhere())
+            ->whereInSql('id', $idsIn)
+            ->setOrderBy("theatre_id")
+            ->setOrderBy("movie_id")
+            ->setOrderBy("show_date")
+            ->setOrderBy("show_time")
+            ->setOrderBy("type");
 
 //showtimes
         $showtimes = Showtime::manager()
-                ->getEntitiesWhere($showtimeWhere);
+            ->getEntitiesWhere($showtimeWhere);
 
-        $showtimesResult = array();
+        $showtimesResult = [];
         foreach ($showtimes as $showtime) {
             $key = "{$showtime->theatre_id}.{$showtime->movie_id}";
             if (!array_key_exists($key, $showtimesResult)) {
-                $showtimesResult[$key] = array();
+                $showtimesResult[$key] = [];
             }
-            $showtimeArr = $showtime->toArray(0, 1, array('id', 'show_time', 'type'));
+            $showtimeArr = $showtime->toArray(0, 1, ['id', 'show_time', 'type']);
             $showtimeArr['link'] = strlen($showtime->url) > 0;
             if (ProxyMode::isCompact()) {
                 $showtimesResult[$key][] = $this->compactShowtime($showtimeArr);
@@ -263,8 +260,9 @@ class ShowtimeService extends IdeoObject {
         return $showtimesResult;
     }
 
-    private function compactShowtime($showtimeArr, $valsOnly = true) {
-        $compacted = array();
+    private function compactShowtime($showtimeArr, $valsOnly = true)
+    {
+        $compacted = [];
         $compacted['id'] = intval($showtimeArr['id']);
         $compacted['t'] = preg_replace('/:00$/', '', $showtimeArr['show_time']);
         $compacted['r'] = Showtime::compact($showtimeArr['type']);
@@ -278,30 +276,30 @@ class ShowtimeService extends IdeoObject {
         return $valsOnly ? array_values($compacted) : $compacted;
     }
 
-    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null, $includeMovieIds = false, $dateOffset = 0, &$theatreFields = array()) {
+    public function getTheatres(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $includeShowtimes = null, $includeMovieIds = false, $dateOffset = 0, &$theatreFields = [])
+    {
         if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
-            return array();
+            return [];
         }
 
         $currentDate = Utilities::dateFromOffset($currentDate, $dateOffset);
         $where = $locationInfo->getQueryWhere()
-                ->where('s.show_date', $currentDate)
-                ->setOrderBy('distance_m', 'ASC')
-                ->setGroupBy('t.id');
+            ->where('s.show_date', $currentDate)
+            ->setOrderBy('distance_m', 'ASC')
+            ->setGroupBy('t.id');
 
         if ($movie_id) {
             $where->where('s.movie_id', $movie_id);
         }
 
         $ids = Theatre::table()->selectFrom('t.id', 't')
-                ->innerJoin(array('tn' => TheatreNearby::table()), 't.id = tn.theatre_id', array('tn.distance_m'))
-                ->innerJoin(array('s' => Showtime::table()), 's.theatre_id = t.id', array(new DbTableFunction("GROUP_CONCAT(DISTINCT s.movie_id) AS movies")))
-                ->where($where)
-                ->query()
-        ;
+            ->innerJoin(['tn' => TheatreNearby::table()], 't.id = tn.theatre_id', ['tn.distance_m'])
+            ->innerJoin(['s' => Showtime::table()], 's.theatre_id = t.id', [new \DbTableFunction("GROUP_CONCAT(DISTINCT s.movie_id) AS movies")])
+            ->where($where)
+            ->query();
 
-        $theatres = array();
-        $theatreFields = array('id', 'name', 'address', 'distance_m');
+        $theatres = [];
+        $theatreFields = ['id', 'name', 'address', 'distance_m'];
         foreach ($ids as $idRow) {
             $theatre = $this->theatreManager->getEntity($idRow['id']);
             /* @var $theatre Theatre */
@@ -312,7 +310,7 @@ class ShowtimeService extends IdeoObject {
                     $theatreArr['showtimes'] = [];
                     $showtimes = $theatre->getShowtimes($movie_id, $currentDate);
                     foreach ($showtimes as $showtime) {
-                        $theatreArr['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
+                        $theatreArr['showtimes'][] = $showtime->toArray(0, 1, ['id', 'show_time', 'show_date', 'url', 'type']);
                     }
                 }
 
@@ -334,53 +332,53 @@ class ShowtimeService extends IdeoObject {
         return $theatres;
     }
 
-    private function compactTheatre($theatreArr) {
-        if(!$theatreArr['distance_m']){
+    private function compactTheatre($theatreArr)
+    {
+        if (!$theatreArr['distance_m']) {
             $theatreArr['distance_m'] = -1;
         }
         $compacted = array_values($theatreArr);
         return $compacted;
     }
 
-    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false, $dateOffset = 0, &$movieFields = array()) {
+    public function getMovies(GeocodeCached $locationInfo, $currentDate = null, $theatre_id = null, $includeShowtimes = false, $includeTheatreIds = false, $dateOffset = 0, &$movieFields = [])
+    {
         if (!$this->loadData($locationInfo, $currentDate, false, $dateOffset)) {
-            return array();
+            return [];
         }
 
         $currentDate = Utilities::dateFromOffset($currentDate, $dateOffset);
 
         $where = $locationInfo->getQueryWhere()
-                ->where('s.show_date', $currentDate)
-        ;
+            ->where('s.show_date', $currentDate);
 
         if ($theatre_id) {
             $where->where('s.theatre_id', $theatre_id);
         }
 
         $idsQuery = Movie::table()->selectFrom('m.id', 'm')
-                ->innerJoin(array('s' => Showtime::table()), 's.movie_id = m.id')
-                ->innerJoin(array('tn' => TheatreNearby::table()), 's.theatre_id = tn.theatre_id', array(new DbTableFunction("GROUP_CONCAT(DISTINCT tn.theatre_id ORDER BY distance_m ASC) as theatres")))
-                ->where($where->setGroupBy("m.id"))
-                //->generateSQL()
-                ->query()
-        ;
+            ->innerJoin(['s' => Showtime::table()], 's.movie_id = m.id')
+            ->innerJoin(['tn' => TheatreNearby::table()], 's.theatre_id = tn.theatre_id', [new \DbTableFunction("GROUP_CONCAT(DISTINCT tn.theatre_id ORDER BY distance_m ASC) as theatres")])
+            ->where($where->setGroupBy("m.id"))
+            //->generateSQL()
+            ->query();
 
-        $ids = array();
-        $theatres = array();
+        $ids = [];
+        $theatres = [];
         foreach ($idsQuery as $result) {
             $ids[] = $result['id'];
             $theatres[$result['id']] = explode(",", $result['theatres']);
         }
 
-        $moviesWhere = (new DbTableWhere())
-                ->whereInArray('id', $ids)
-                ->setOrderBy('title');
+        $moviesWhere = \DbTableWhere::get()
+            ->whereInArray('id', $ids)
+            ->setOrderBy('title');
 
         $movieList = Movie::manager()
-                ->getEntitiesWhere($moviesWhere);
+            ->getEntitiesWhere($moviesWhere);
 
-        $movies = array();
-        $movieFields = array('id', 'title', 'genre', 'user_rating', 'rated', 'critic_rating', 'runtime');
+        $movies = [];
+        $movieFields = ['id', 'title', 'genre', 'user_rating', 'rated', 'critic_rating', 'runtime'];
         Movie::setToArrayFields($movieFields);
         foreach ($movieList as $movieInList) {
             /* @var $movieInList Movie */
@@ -388,9 +386,9 @@ class ShowtimeService extends IdeoObject {
             //$this->_filterObject($movie);
             //add showtimes ?
             if ($includeShowtimes) {
-                $movie['showtimes'] = array();
+                $movie['showtimes'] = [];
                 foreach ($movieInList->getShowtimes($theatre_id, $currentDate) as $showtime) {
-                    $movie['showtimes'][] = $showtime->toArray(0, 1, array('id', 'show_time', 'show_date', 'url', 'type'));
+                    $movie['showtimes'][] = $showtime->toArray(0, 1, ['id', 'show_time', 'show_date', 'url', 'type']);
                 }
             }
 
@@ -408,7 +406,8 @@ class ShowtimeService extends IdeoObject {
         return $movies;
     }
 
-    private function compactMovie($movie) {
+    private function compactMovie($movie)
+    {
         $compact = array_values($movie);
 //        foreach ($compact as $f => $v) {
 //            if (is_null($v)) {
@@ -419,17 +418,19 @@ class ShowtimeService extends IdeoObject {
     }
 
     /**
-     * 
+     *
      * @return self
      */
-    public static function instance() {
+    public static function instance()
+    {
         if (!self::$instance) {
             self::$instance = new self();
         }
         return self::$instance;
     }
 
-    protected function _filterObject(&$object) {
+    protected function _filterObject(&$object)
+    {
         if (is_array($object)) {
             foreach ($object as &$val) {
                 $this->_filterObject($val);
@@ -445,7 +446,8 @@ class ShowtimeService extends IdeoObject {
         }
     }
 
-    public function checkCache($showtime_id) {
+    public function checkCache($showtime_id)
+    {
         if (!is_dir(CACHE_DIR) && !mkdir(CACHE_DIR, 0700)) {
             return null;
         }
@@ -456,11 +458,13 @@ class ShowtimeService extends IdeoObject {
         return null;
     }
 
-    private function cacheName($id) {
+    private function cacheName($id)
+    {
         return CACHE_DIR . "/qrcode.{$id}.pbi";
     }
 
-    public function getRawQrCode($showtime_id) {
+    public function getRawQrCode($showtime_id)
+    {
         $showtime = $this->showtimeManager->getEntity($showtime_id);
 
         if ($showtime && $showtime->url) {
@@ -475,7 +479,7 @@ class ShowtimeService extends IdeoObject {
                 if ($shorten) {
                     $l = $shorten['url'];
                 } else {
-                    $l = SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+                    $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
                 }
 
                 $filename = tempnam(sys_get_temp_dir(), "qrcode_");
@@ -493,8 +497,9 @@ class ShowtimeService extends IdeoObject {
         return null;
     }
 
-    public function getSupportedCountries() {
-        $results = array();
+    public function getSupportedCountries()
+    {
+        $results = [];
         foreach ($this->serviceProviderList as $serviceProvider) {
             $supported = $serviceProvider->getSupportedCountries();
             if (empty($supported)) {
@@ -505,29 +510,32 @@ class ShowtimeService extends IdeoObject {
         }
 
         sort($results);
-        $countryTables = array();
+        $countryTables = [];
         foreach ($results as $country) {
             $countryTables[$country] = LookupResult::$ISO_TABLE[$country];
         }
         return $countryTables;
     }
 
-    public function getBitly() {
+    public function getBitly()
+    {
         if (!$this->bitly) {
-            $bitlyConfig = SystemConfig::getInstance()->bitly;
+            $bitlyConfig = \SystemConfig::getInstance()->bitly;
             $this->bitly = new Bitly($bitlyConfig['api_key'], $bitlyConfig['api_secret'], $bitlyConfig['token']);
         }
         return $this->bitly;
     }
 
-    public static function cleanShowdates() {
+    public static function cleanShowdates()
+    {
         $staleDate = date('Y-m-d', strtotime("-3 days"));
         $deleted = Showtime::table()->delete("show_date <= '{$staleDate}'");
         \SystemLogger::info("Cleaned ", $deleted, "show dates");
         return $deleted;
     }
 
-    public static function cleanPbis() {
+    public static function cleanPbis()
+    {
         $staleDate = strtotime("-4 days");
         $files = glob(CACHE_DIR . "/*");
         $removed = 0;

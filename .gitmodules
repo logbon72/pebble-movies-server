@@ -1,9 +1,3 @@
-[submodule "application/framework"]
-	path = application/framework
-	url = git@bitbucket.org:logbon72/ideo.git
-[submodule "application/library/fluentdom"]
-	path = application/library/fluentdom
-	url = git://github.com/FluentDOM/FluentDOM
 [submodule "application/library/bitlyapi"]
 	path = application/library/bitlyapi
 	url = https://github.com/logbon72/bitly-api-php.git

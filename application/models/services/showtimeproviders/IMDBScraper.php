@@ -59,6 +59,7 @@ class IMDBScraper extends ShowtimeServiceProvider
 
     /**
      * @param string $urlTemplate
+     * @return $this
      */
     public function setUrlTemplate($urlTemplate)
     {
@@ -69,7 +70,7 @@ class IMDBScraper extends ShowtimeServiceProvider
 
     public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0)
     {
-
+        \SystemLogger::debug('SCRAPING started');
         $data = array(
             'countryIso' => $geocode->country_iso,
             'date' => \Utilities::dateFromOffset($date ?: date('Y-m-d'), $offset),
@@ -86,15 +87,21 @@ class IMDBScraper extends ShowtimeServiceProvider
 
     protected function extractShowtimes($pageData)
     {
-        $imdbPage = QueryPath::withHTML5($pageData);
+        $startTime = microtime(true);
+        \SystemLogger::debug('Extraction of page started, total length = ', strlen($pageData));
+        \SystemLogger::debug('Loading into QueryPath');
+        $imdbPage = QueryPath::withHTML($pageData);
+        \SystemLogger::debug('Query Path done loading...');
+
         \SystemLogger::debug(__CLASS__, "Extracting theatres...");
         //$cinemasList = $imdbPage->find("#cinemas-at-list .list_item.odd, #cinemas-at-list .list_item.even");
         $cinemasList = $imdbPage->find("#cinemas-at-list > .list_item");
-        \SystemLogger::debug(__CLASS__, "Found: ", count((array)$cinemasList));
+        \SystemLogger::debug(__CLASS__, "Found: ", $cinemasList->count(), "cinemas");
         $theatreMovieShowtimes = array();
 
         if ($cinemasList) {
             for ($i = 0; ($i < ShowtimeService::THEATRE_LIMIT && $i < $cinemasList->count()); $i++) {
+                \SystemLogger::debug('Processing theatre at position: ', $i);
                 /* @var $cinemaDiv DOMQuery */
                 $cinemaDiv = new DOMQuery($cinemasList->get($i));
                 $theatreData = array();
@@ -112,7 +119,7 @@ class IMDBScraper extends ShowtimeServiceProvider
                 $addressSpan = $addressSpanTmp ? preg_replace('/\s+/', ' ', $addressSpanTmp->text()) : "";
                 $theatreData['address'] = trim(explode('|', $addressSpan)[0]);
                 $movieDomList = $cinemaDiv->find('.list_item');
-                \SystemLogger::info(__CLASS__, "Number of Movie: ", count($movieDomList));
+                \SystemLogger::info(__CLASS__, "Number of Movies = ", $movieDomList->count());
                 if (!count($movieDomList)) {
                     \SystemLogger::debug(__CLASS__, "No movies found");
                     continue;
@@ -122,8 +129,11 @@ class IMDBScraper extends ShowtimeServiceProvider
                     'theatre' => $theatreData,
                     'movies' => $this->extractMovies($movieDomList),
                 );
+                \SystemLogger::debug('--Theatre extraction completed---');
             }
         }
+
+        \SystemLogger::debug('Showtimes extraction completed in :', (microtime(true) - $startTime));
         //var_dump($theatreMovieShowtimes);exit;
         return $theatreMovieShowtimes;
     }

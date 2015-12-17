@@ -56,6 +56,7 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
 
     protected function callUrl($url, $logResponse = null)
     {
+        $startTime = microtime(true);
         $contextOpt = array(
             'http' => array(
                 'user_agent' => $this->userAgent,
@@ -68,7 +69,7 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
         $streamContext = stream_context_create($contextOpt);
         \SystemLogger::debug(get_class($this), ":", __METHOD__, "URL: ", $url);
         $result = file_get_contents($url, false, $streamContext);
-        \SystemLogger::debug("response length: ", strlen($result), $http_response_header);
+        \SystemLogger::debug("response length: ", strlen($result));
 
         if ($logResponse === null) {
             $logResponse = $this->isLoggingRequests();
@@ -78,6 +79,7 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
             $this->logRequest($url, $result, $http_response_header);
         }
 
+        \SystemLogger::debug(get_class($this), ":", 'Completed request in : ', (microtime(true) - $startTime), 'ms');
         return $result;
     }
 

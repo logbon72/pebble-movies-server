@@ -92,26 +92,32 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
 
     private function extractTheatreMovieShowtimes($pageData, $limit, &$totalPages)
     {
+        $startTime = microtime(true);
+        \SystemLogger::debug("Begining extraction of data from file, size = ", strlen($pageData));
         if ($limit <= 0) {
             \SystemLogger::warn("Invalid limit was supplied: ", $limit);
             return array();
         }
 
+        \SystemLogger::debug('Attempting to load into Query Path');
         /* @var $moviePage DOMQuery */
         $moviePage = \QueryPath::withHTML($pageData, null, array(
             'convert_to_encoding' => "UTF-8",
             'convert_from_encoding' => "UTF-8",
         ));
+        \SystemLogger::debug('Loaded into QueryPath');
+
         /* @var $theatersDom DOMQuery */
         $theatersDom = $moviePage->find("div.theater");
         //get total pages
         $paginationDom = $moviePage->find("#navbar td");
         $totalPages = $paginationDom->length ? $paginationDom->length - 2 : 1;
 
-        \SystemLogger::info("Found", $theatersDom->length, "theatres");
+        \SystemLogger::debug("Found", $theatersDom->length, "theatres");
 
         $theatreCinemas = array();
         $foundTheatres = 0;
+        \SystemLogger::debug('Loading data from Theatres DOM list');
         for ($i = 0; $i < $theatersDom->length && $foundTheatres < $limit; $i++) {
             $theatre = array();
             $theatreDom = new DOMQuery($theatersDom->get($i));
@@ -135,6 +141,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
             $foundTheatres++;
         }
 
+        \SystemLogger::info('Extraction done, completed in ', (microtime(true) - $startTime), 'ms');
         return $theatreCinemas;
     }
 

@@ -24,6 +24,11 @@ use PHPQRCode\QRcode;
 use Utilities;
 
 /**
+ * Specifies the maximum number of cinemas to return per location.
+ */
+define('SHOWTIME_SERVICE_THEATRE_LIMIT', \SystemConfig::getInstance()->service['theatre_limit'] ?: 15);
+
+/**
  * Description of ShowtimeService
  *
  * @author intelWorX
@@ -70,7 +75,7 @@ class ShowtimeService extends \IdeoObject
      */
     protected $serviceProviderList = [];
 
-    const THEATRE_LIMIT = 15;
+    const THEATRE_LIMIT = SHOWTIME_SERVICE_THEATRE_LIMIT;
 
     private function __construct()
     {
@@ -132,7 +137,11 @@ class ShowtimeService extends \IdeoObject
 
         foreach ($this->serviceProviderList as $serviceProvider) {
             if ($serviceProvider->supports($locationInfo)) {
+                $startInner = microtime(true);
+                \SystemLogger::debug('Extraction with ', $serviceProvider->getClass(), 'started');
                 $results = $serviceProvider->loadShowtimes($locationInfo, $date, $dateOffset);
+                \SystemLogger::debug('Extraction with:', $serviceProvider->getClass(), 'completed in ', (microtime(true) - $startInner));
+                \SystemLogger::debug('Caching result...');
                 ///debug_op($results, true);
                 if (!empty($results)) {
                     //cache and save...
@@ -150,16 +159,19 @@ class ShowtimeService extends \IdeoObject
      * @param GeocodeCached $locationInfo
      * @return int number of cached results
      */
-    protected function cacheResult($results, $locationInfo, $date)
+    private function cacheResult($results, $locationInfo, $date)
     {
-        $return = 0;
+        \SystemLogger::debug('Extracted results are being cached.');
+        $startTime = microtime(true);
+        $showtimesHuge = [];
+        $computeDistance = !$this->shouldDeferDistanceInfo();
         foreach ($results as $theatreMovieShowtime) {
-            $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre'], $locationInfo);
+            $theatre = Theatre::getOrCreate($theatreMovieShowtime['theatre'], $locationInfo, $computeDistance, $computeDistance);
             if ($theatre) {
                 foreach ($theatreMovieShowtime['movies'] as $movieShowtimeData) {
                     $movie = Movie::getOrCreate($movieShowtimeData['movie']);
                     if ($movie) {
-                        $return += $this->cacheShowtimes($theatre, $movie, $movieShowtimeData['showtimes']);
+                        $showtimesHuge = array_merge($showtimesHuge, $this->setShowtimesData($theatre, $movie, $movieShowtimeData['showtimes']));
                     }
                 }
             } else {
@@ -167,12 +179,13 @@ class ShowtimeService extends \IdeoObject
             }
         }
 
+        $result = !empty($showtimesHuge) ? Showtime::table()->insert($showtimesHuge, true, true) : 0;
         $locationInfo->setLastUpdated($date);
-
-        return $return;
+        \SystemLogger::debug('CACHING OF of results completed in: ', (microtime(true) - $startTime), 'ms');
+        return $result;
     }
 
-    protected function cacheShowtimes(Theatre $theatre, Movie $movie, $showtimes)
+    private function setShowtimesData(Theatre $theatre, Movie $movie, $showtimes)
     {
         if (empty($showtimes)) {
             return 0;
@@ -183,27 +196,7 @@ class ShowtimeService extends \IdeoObject
             $showtimes[$k]['movie_id'] = $movie->id;
         }
 
-        $queryWhere = \DbTableWhere::get()
-            ->where('show_date', $showtime['show_date'])
-            ->where('show_time', $showtime['show_time'])
-            ->where('theatre_id', $theatre->id)
-            ->where('movie_id', $movie->id)
-            ->where('type', $showtime['type']);
-
-        if (Showtime::manager()->getEntityWhere($queryWhere)) {
-            \SystemLogger::info("Show times have already been cached.");
-            return 1;
-        }
-
-        try {
-            $inserted = Showtime::table()
-                ->insert($showtimes, true, true);
-        } catch (\Exception $e) {
-            \SystemLogger::info("Could not save showtime, possible duplicate, error message: ", $e->getMessage());
-            $inserted = 0;
-        }
-
-        return $inserted;
+        return $showtimes;
     }
 
     public function getShowtimes(GeocodeCached $locationInfo, $currentDate = null, $movie_id = null, $theatre_id = null, $dateOffset = 0)
@@ -549,6 +542,11 @@ class ShowtimeService extends \IdeoObject
             $this->bitly = new Bitly($bitlyConfig['api_key'], $bitlyConfig['api_secret'], $bitlyConfig['token']);
         }
         return $this->bitly;
+    }
+
+    private function shouldDeferDistanceInfo()
+    {
+        return !!\SystemConfig::getInstance()->service['defer_distance_info'];
     }
 
     public static function cleanShowdates()

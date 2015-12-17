@@ -8,21 +8,18 @@
 
 namespace models;
 
-use DbTableFunction;
-use DbTableWhere;
-use IdeoObject;
 use models\entities\GeocodeCached;
 use models\entities\Theatre;
 use models\entities\TheatreNearby;
 use models\services\LocationService;
-use SystemLogger;
 
 /**
  * Description of LocationUpdater
  *
  * @author JosephT
  */
-class LocationUpdater extends IdeoObject {
+class LocationUpdater extends \IdeoObject
+{
 
     //put your code here
     const SLEEP_INTERVAL_MICRO_SECONDS = 700;
@@ -32,36 +29,40 @@ class LocationUpdater extends IdeoObject {
      *
      * @var GeocodeCached[]
      */
-    private static $cachedGeocodes = array();
+    private static $cachedGeocodes = [];
 
-    public static function update($limit = 100) {
-        SystemLogger::setVerbose(true);
-        SystemLogger::info("Running location Update");
-        $where = (new DbTableWhere())
-                ->whereOr('distance_m', -1)
-                ->whereOrString('distance_m IS NULL')
-                ->setOrderBy('created_on')
-                ->setLimitAndOffset($limit)
-        ;
+    /**
+     * @param int $limit
+     * @return int
+     */
+    public static function update($limit = 100)
+    {
+        \SystemLogger::setVerbose(true);
+        \SystemLogger::info("Running location Update");
+        $where = (new \DbTableWhere())
+            ->whereOrString('distance_m <= 0')
+            ->whereOrString('distance_m IS NULL')
+            ->setOrderBy('created_on')
+            ->setLimitAndOffset($limit);
 
         $theatreNearBys = TheatreNearby::manager()
-                ->getEntitiesWhere($where);
+            ->getEntitiesWhere($where);
 
-        SystemLogger::info("Nearbys found for update = ", count($theatreNearBys));
+        \SystemLogger::info("Nearbys found for update = ", count($theatreNearBys));
 
         $locationService = LocationService::instance();
-        $seenTheatres = array();
+        $seenTheatres = [];
         $successful = 0;
         foreach ($theatreNearBys as $theatreNearBy) {
             //var_dump($theatreNearBy);exit;
             $theatre = $theatreNearBy->theatre;
             $success = false;
-            SystemLogger::info("Updating Nearby with ID ", $theatreNearBy->id, " PostalCode/ISO", $theatreNearBy->postal_code, "/", $theatreNearBy->country_iso, "Theatre:", $theatre->name, $theatre->address);
+            \SystemLogger::info("Updating Nearby with ID ", $theatreNearBy->id, " PostalCode/ISO", $theatreNearBy->postal_code, "/", $theatreNearBy->country_iso, "Theatre:", $theatre->name, $theatre->address);
             /* @var $theatre Theatre */
             if ($theatre) {
                 if (!($theatre->latitude && $theatre->longitude) && !in_array($theatre->id, $seenTheatres)) {
                     $seenTheatres[] = $theatre->id;
-                    if($theatre->address){
+                    if ($theatre->address) {
                         self::setTheatreLatLng($theatre);
                     }
                 }
@@ -70,18 +71,18 @@ class LocationUpdater extends IdeoObject {
                     $geocodeCached = self::getGeocodeCached($theatreNearBy);
                     if ($geocodeCached) {
                         $distance = $locationService->computeDistance($theatre->getGeocode(), $geocodeCached->getGeocode());
-                        if ($distance && $distance > 0) {
-                            $success = $theatreNearBy->update(array('distance_m' => $distance), 'id');
-                            SystemLogger::info("Distance computed as: ", $distance);
+                        if ($distance >= 0) {
+                            $success = $theatreNearBy->update(['distance_m' => max([$distance, 100])], 'id');
+                            \SystemLogger::info("Distance computed as: ", $distance);
                         } else {
-                            SystemLogger::info("Distance could not be computed");
+                            \SystemLogger::info("Distance could not be computed");
                         }
                     }
                 }
             }
 
             if (!$success) {
-                $theatreNearBy->update(array('distance_m' => self::DISTANCE_FAILED), 'id');
+                $theatreNearBy->update(['distance_m' => self::DISTANCE_FAILED], 'id');
             } else {
                 $successful++;
             }
@@ -90,34 +91,40 @@ class LocationUpdater extends IdeoObject {
         return $successful;
     }
 
-    public static function setTheatreLatLng(Theatre $theatre) {
+    /**
+     * @param Theatre $theatre
+     * @return bool|mixed|\mysqli_result
+     */
+    public static function setTheatreLatLng(Theatre $theatre)
+    {
         //51.4752267,-0.2396438
         \SystemLogger::info("Finding LongLat for: ", $theatre->name, $theatre->address);
-        $geocode = LocationService::instance()->addressLookup($theatre->address, array(), true);
+        $geocode = LocationService::instance()->addressLookup($theatre->address, [], true);
         $saved = false;
         if ($geocode) {
             $geoLocation = $geocode->getGeocode();
             \SystemLogger::info("Found Geocode: ", strval($geoLocation));
-            $saved = $theatre->update(array(
+            $saved = $theatre->update([
                 'longitude' => $geoLocation->getLongitude(),
                 'latitude' => $geoLocation->getLatitude(),
-                    ), 'id');
+            ], 'id');
         }
 
         return $saved;
     }
 
     /**
-     * 
+     *
      * @param TheatreNearby $tnb
      * @return GeocodeCached
-     * 
+     *
      */
-    public static function getGeocodeCached(TheatreNearby $tnb) {
-        $queryWhere = new DbTableWhere();
+    public static function getGeocodeCached(TheatreNearby $tnb)
+    {
+        $queryWhere = new \DbTableWhere();
         $queryWhere->where('country_iso', $tnb->country_iso);
         if ($tnb->postal_code) {
-            $queryWhere->where(new DbTableFunction("REPLACE(postal_code, ' ', '')"), str_replace(' ', '', $tnb->postal_code));
+            $queryWhere->where(new \DbTableFunction("REPLACE(postal_code, ' ', '')"), str_replace(' ', '', $tnb->postal_code));
         } else {
             $queryWhere->where('city', $tnb->city);
         }

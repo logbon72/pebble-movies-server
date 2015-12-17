@@ -7,6 +7,7 @@
  */
 
 namespace models\entitymanagers;
+use models\entities\UserDevice;
 
 /**
  * Description of UserDeviceManager
@@ -35,7 +36,10 @@ class UserDeviceManager extends \GenericEntityManager
     /**
      *
      * @param string $token format requestId|deviceId|sign=sha1(requestId.deviceId.secretKey)
-     * @return \models\entities\UserDevice current device represented by token.
+     * @param $requestId
+     * @param bool $verifySign
+     * @return UserDevice current device represented by token.
+     * @throws \DbTableException
      */
     public static function validate($token, &$requestId, $verifySign = true)
     {

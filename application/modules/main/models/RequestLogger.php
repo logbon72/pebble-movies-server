@@ -7,6 +7,7 @@
  */
 
 namespace main\models;
+use models\entitymanagers\UserDeviceReqManager;
 
 /**
  * Description of RequestLogger
@@ -26,13 +27,13 @@ class RequestLogger extends \ClientRequestHook {
     public function postDisplay(\ClientHttpRequest $request, \BaseController $controller) {
         parent::postDisplay($request, $controller);
         foreach (self::$logRecords as $i => $logRecord) {
-            self::$logRecords[$i] = array_merge(array(
-                'ip_address' => getRealIpAddress(),
-                    ), $logRecord);
+            self::$logRecords[$i] = array_merge([
+                'ip_address' => ip2long(getRealIpAddress()),
+            ], $logRecord);
         }
 
         if (count(self::$logRecords)) {
-            return \models\entitymanagers\UserDeviceReqManager::instance()
+            return UserDeviceReqManager::instance()
                             ->getEntityTable()
                             ->insert(self::$logRecords, false, true);
         }

@@ -129,7 +129,6 @@ class ShowtimeService extends \IdeoObject
         }
 
         set_time_limit(0);
-        $results = [];
 
         foreach ($this->serviceProviderList as $serviceProvider) {
             if ($serviceProvider->supports($locationInfo)) {
@@ -485,7 +484,7 @@ class ShowtimeService extends \IdeoObject
                 $filename = tempnam(sys_get_temp_dir(), "qrcode_");
                 //header("Content-Type: image/png");
                 QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
-                $converter = new ImageConverter($filename);
+                $converter = new \ImageConverter($filename);
                 $cacheFile = $this->cacheName($showtime_id);
                 if ($converter->convertToPbi($cacheFile)) {
                     return file_get_contents($cacheFile);

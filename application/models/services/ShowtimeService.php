@@ -408,11 +408,6 @@ class ShowtimeService extends \IdeoObject
     private function compactMovie($movie)
     {
         $compact = array_values($movie);
-//        foreach ($compact as $f => $v) {
-//            if (is_null($v)) {
-//                $compact[$f] = 0;
-//            }
-//        }
         return $compact;
     }
 
@@ -445,57 +440,88 @@ class ShowtimeService extends \IdeoObject
         }
     }
 
-    public function checkCache($showtime_id)
+    public function checkCache($showtime_id, $png = false)
     {
         if (!is_dir(CACHE_DIR) && !mkdir(CACHE_DIR, 0700)) {
             return null;
         }
-        $fileName = CACHE_DIR . "/" . $this->cacheName($showtime_id);
+
+        $fileName = $this->cacheName($showtime_id, $png);
         if (file_exists($fileName)) {
-            return file_get_contents($fileName);
+            return $fileName;
         }
         return null;
     }
 
-    private function cacheName($id)
+    private function cacheName($id, $png = false)
     {
-        return CACHE_DIR . "/qrcode.{$id}.pbi";
+        return CACHE_DIR . "/qrcode.{$id}." . ($png ? "png" : "pbi");
     }
 
-    public function getRawQrCode($showtime_id)
+    /**
+     *
+     * Returns a Binary string representing the PBI file.
+     * @param $showtimeId
+     * @return null|string binary string
+     */
+    public function getRawQrCode($showtimeId)
     {
-        $showtime = $this->showtimeManager->getEntity($showtime_id);
+        $cached = $this->checkCache($showtimeId);
+        if ($cached) {
+            return file_get_contents($cached);
+        }
 
-        if ($showtime && $showtime->url) {
-            $cached = $this->checkCache($showtime_id);
-            if ($cached) {
-                return $cached;
+        $filename = $this->getPNGQrCode($showtimeId);
+        if ($filename) {
+            $converter = new \ImageConverter($filename);
+            $cacheFile = $this->cacheName($showtimeId);
+            if ($converter->convertToPbi($cacheFile)) {
+                return file_get_contents($cacheFile);
             }
+        }
 
-            //$l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+        return null;
+    }
+
+    /**
+     *
+     * Generates QRCode for the ticket URL of a particular showtime.
+     * @param $showtimeId
+     * @return null|string the path to the QRCode PNG file on success.
+     * @throws \DbTableException
+     */
+    public function getPNGQrCode($showtimeId)
+    {
+        $cached = $this->checkCache($showtimeId, true);
+        if ($cached) {
+            return $cached;
+        }
+
+        $showtime = $this->showtimeManager->getEntity($showtimeId);
+        if ($showtime && $showtime->url) {
             try {
                 $shorten = $this->getBitly()->shorten($showtime->url, 'j.mp');
                 if ($shorten) {
                     $l = $shorten['url'];
                 } else {
-                    $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtime_id;
+                    $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtimeId;
                 }
 
-                $filename = tempnam(sys_get_temp_dir(), "qrcode_");
-                //header("Content-Type: image/png");
+                $filename = $this->cacheName($showtimeId, true);
                 QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
-                $converter = new \ImageConverter($filename);
-                $cacheFile = $this->cacheName($showtime_id);
-                if ($converter->convertToPbi($cacheFile)) {
-                    return file_get_contents($cacheFile);
-                }
+                return $filename;
             } catch (\Exception $e) {
                 \SystemLogger::error(get_class($e), $e->getTraceAsString());
             }
         }
+
         return null;
     }
 
+    /**
+     * Lists all countries supported by application within all service providers
+     * @return array
+     */
     public function getSupportedCountries()
     {
         $results = [];
@@ -516,7 +542,7 @@ class ShowtimeService extends \IdeoObject
         return $countryTables;
     }
 
-    public function getBitly()
+    private function getBitly()
     {
         if (!$this->bitly) {
             $bitlyConfig = \SystemConfig::getInstance()->bitly;

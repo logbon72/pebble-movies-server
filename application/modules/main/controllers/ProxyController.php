@@ -24,7 +24,8 @@ use models\services\ShowtimeService;
  *
  * @author intelWorX
  */
-class ProxyController extends AppBaseController {
+class ProxyController extends AppBaseController
+{
 
     /**
      *
@@ -68,7 +69,8 @@ class ProxyController extends AppBaseController {
      *
      * @param \ClientHttpRequest $req
      */
-    public function __construct($req) {
+    public function __construct($req)
+    {
         $this->response = new Response();
         $req->addHook(new RequestLogger(), 1000);
         $this->currentVersion = doubleval(\SystemConfig::getInstance()->system['current_version']);
@@ -77,7 +79,8 @@ class ProxyController extends AppBaseController {
         $this->showtimeService = ShowtimeService::instance();
     }
 
-    protected function _initCredentials() {
+    protected function _initCredentials()
+    {
         $token = $this->_request->getQueryParam('token');
         $this->userDevice = UserDeviceManager::validate($token, $this->requestId);
         $action = $this->_request->getAction();
@@ -98,7 +101,8 @@ class ProxyController extends AppBaseController {
         }
     }
 
-    protected function _initGeocode() {
+    protected function _initGeocode()
+    {
         $locationService = LocationService::instance();
         if ($this->_request->hasQueryParam('latlng')) {
             $latLng = $this->_request->getQueryParam('latlng');
@@ -113,14 +117,15 @@ class ProxyController extends AppBaseController {
         }
     }
 
-    protected function _initDate() {
+    protected function _initDate()
+    {
         if ($this->_request->getQueryParam('date')) {
             //$userVersion = doubleval($this->_request->getQueryParam('version'));
             $dateTs = strtotime($this->_request->getQueryParam('date'));
             if ($this->userVersion > self::DATE_BUG_VERSION) {
                 $this->currentDate = date('Y-m-d', $dateTs);
             } else {
-                $dayComp = (int) explode("-", $this->_request->getQueryParam('date'))[2];
+                $dayComp = (int)explode("-", $this->_request->getQueryParam('date'))[2];
                 if ($dayComp < 1) {//1 for monday, 7 for sunday
                     $dayComp = 7;
                 }
@@ -146,17 +151,19 @@ class ProxyController extends AppBaseController {
             $this->currentDate = date("Y-m-d");
         }
 
-        $this->dateOffset = intval($this->_request->getQueryParam('dateOffset')) ? : 0;
+        $this->dateOffset = intval($this->_request->getQueryParam('dateOffset')) ?: 0;
         if ($this->dateOffset < 0) {
             $this->dateOffset = 0;
         }
     }
 
-    public function doDefault() {
+    public function doDefault()
+    {
         $this->_forward('register');
     }
 
-    public function doPreload() {
+    public function doPreload()
+    {
         $version = $this->currentVersion;
         if ($this->geocode) {
             $status = $this->showtimeService->loadData($this->geocode, $this->currentDate, false, $this->dateOffset);
@@ -166,7 +173,8 @@ class ProxyController extends AppBaseController {
         $this->result['version'] = $version;
     }
 
-    public function doPreload11() {
+    public function doPreload11()
+    {
         $this->doPreload();
         $data = array();
         if ($this->result['status']) {
@@ -185,9 +193,10 @@ class ProxyController extends AppBaseController {
         $this->result['data'] = $data;
     }
 
-    public function doRegister() {
+    public function doRegister()
+    {
         $this->_enforcePOST();
-        $timeInt = (int) substr($this->requestId, 0, strlen($this->requestId) - 3);
+        $timeInt = (int)substr($this->requestId, 0, strlen($this->requestId) - 3);
         $diff = abs($timeInt - time());
         if (!$this->userDevice) {
             if ($diff > self::ALLOWED_LAG) {
@@ -210,7 +219,8 @@ class ProxyController extends AppBaseController {
         }
     }
 
-    protected function _checkLocationInfo() {
+    protected function _checkLocationInfo()
+    {
         if (!$this->geocode) {
             $this->response->addError(new ApiError("NO_GEO", "No geolocation info"));
             $this->display();
@@ -218,13 +228,15 @@ class ProxyController extends AppBaseController {
         }
     }
 
-    public function doTheatres() {
+    public function doTheatres()
+    {
         $theatres = $this->geocode ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate) : array();
         $this->result['theatres'] = $theatres;
     }
 
-    public function doQr() {
-        $showtime_id = (int) $this->_request->getQueryParam('showtime_id');
+    public function doQr()
+    {
+        $showtime_id = (int)$this->_request->getQueryParam('showtime_id');
         header("Content-Type: application/octet-stream");
         $data = "";
         if ($showtime_id) {
@@ -233,7 +245,18 @@ class ProxyController extends AppBaseController {
         die($data);
     }
 
-    public function doSettings() {
+    public function doQrPng()
+    {
+        $showtime_id = (int)$this->_request->getQueryParam('showtime_id');
+        header("Content-Type: image/png");
+        if ($showtime_id && ($file = $this->showtimeService->getPNGQrCode($showtime_id))) {
+            readfile($file);
+        }
+        die();
+    }
+
+    public function doSettings()
+    {
         $this->_view->availableCountries = $this->showtimeService->getSupportedCountries();
         $this->_view->geocode = $this->geocode;
         $this->_view->hasUpdate = $this->currentVersion > $this->userVersion;
@@ -242,35 +265,42 @@ class ProxyController extends AppBaseController {
         exit;
     }
 
-    public function doTheatreMovies() {
-        $theatreId = (int) $this->_request->getQueryParam('theatre_id');
+    public function doTheatreMovies()
+    {
+        $theatreId = (int)$this->_request->getQueryParam('theatre_id');
         $this->result['theatre_movies'] = $theatreId && $this->geocode ? $this->showtimeService->getMovies($this->geocode, $this->currentDate, $theatreId, true) : array();
     }
 
-    public function doMovies() {
+    public function doMovies()
+    {
         $this->result['movies'] = $this->geocode ? $this->showtimeService->getMovies($this->geocode, $this->currentDate) : array();
     }
 
-    public function doMovieTheatres() {
-        $movieId = (int) $this->_request->getQueryParam('movie_id');
+    public function doMovieTheatres()
+    {
+        $movieId = (int)$this->_request->getQueryParam('movie_id');
 
         $this->result['movie_theatres'] = $movieId && $this->geocode ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate, $movieId, true) : array();
     }
 
-    public function display() {
+    public function display()
+    {
         $this->response->setResult($this->result);
         $this->response->output();
     }
 
-    public function getLocationInfo() {
+    public function getLocationInfo()
+    {
         return $this->geocode;
     }
 
-    public function getCurrentDate() {
+    public function getCurrentDate()
+    {
         return $this->currentDate;
     }
 
-    public function doClean() {
+    public function doClean()
+    {
         if ($this->_request->getQueryParam('skip') == 200) {
             $deleted = ShowtimeService::cleanShowdates();
             echo "Showtimes deleted: ", $deleted, "\n";
@@ -280,7 +310,8 @@ class ProxyController extends AppBaseController {
         exit;
     }
 
-    protected function _initMode() {
+    protected function _initMode()
+    {
         if ($this->userVersion && $this->userVersion >= self::UPGRADE_COMPACT_VERSION) {
             ProxyMode::setMode(ProxyMode::MODE_VERSION_COMPACT);
         } else {

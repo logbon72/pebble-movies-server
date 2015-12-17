@@ -2,13 +2,17 @@
 
 namespace models\services;
 
+use models\GeoLocation;
+
 /**
  * Description of LocationService
  *
  * @author intelWorX
  */
-class LocationService extends \IdeoObject {
+class LocationService extends \IdeoObject
+{
 
+    const EARTH_RADIUS = 6378137;
     //put your code here
     /**
      *
@@ -31,7 +35,8 @@ class LocationService extends \IdeoObject {
      */
     protected $geocodeCachedManager;
 
-    private function __construct() {
+    private function __construct()
+    {
         $serviceProvidersDir = __DIR__ . DS . 'locationproviders';
         $directoryIterator = new \DirectoryIterator($serviceProvidersDir);
         while ($directoryIterator->valid()) {
@@ -54,24 +59,25 @@ class LocationService extends \IdeoObject {
     }
 
     /**
-     * 
+     *
      * @param string $latLong
      * @param bool $forceReload
      * @return \models\entities\GeocodeCached Description
-     * 
+     *
      */
-    public function lookUp($latLong, $forceReload = false) {
+    public function lookUp($latLong, $forceReload = false)
+    {
         list($lat, $long) = explode(',', $latLong);
         $preciseLat = round(doubleval($lat), self::GEOCODE_PRECISION);
         $preciseLong = round(doubleval($long), self::GEOCODE_PRECISION);
 
         if (!$forceReload) {
             $lookUpWhere = (new \DbTableWhere())
-                    ->where('longitude', $preciseLong)
-                    ->where('latitude', $preciseLat)
-                    ->setLimitAndOffset(1);
+                ->where('longitude', $preciseLong)
+                ->where('latitude', $preciseLat)
+                ->setLimitAndOffset(1);
             $cachedList = \models\entities\GeocodeCached::manager()
-                    ->getEntitiesWhere($lookUpWhere);
+                ->getEntitiesWhere($lookUpWhere);
             if (count($cachedList)) {
                 return $cachedList[0];
             }
@@ -99,15 +105,16 @@ class LocationService extends \IdeoObject {
     }
 
     /**
-     * 
+     *
      * @param type $address
      * @return null|\models\entities\GeocodeCached
      */
-    public function addressLookup($address, $extraData = array(), $shuffle=false) {
-        if($shuffle){
+    public function addressLookup($address, $extraData = array(), $shuffle = false)
+    {
+        if ($shuffle) {
             shuffle($this->serviceProviderList);
         }
-        
+
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\AddressLookupI')) {
                 /* @var $serviceProvier AddressLookupI */
@@ -128,13 +135,14 @@ class LocationService extends \IdeoObject {
     }
 
     /**
-     * 
+     *
      * @param string $postalCode
      * @param string $countryIso
      * @param string $city
      * @return \models\entities\GeocodeCached
      */
-    public function postalCodeLookup($postalCode, $countryIso, $city = null) {
+    public function postalCodeLookup($postalCode, $countryIso, $city = null)
+    {
         $lookupWhere = new \DbTableWhere();
         $countryIso = LookupResult::remapIso($countryIso);
         $lookupWhere->where('country_iso', $countryIso);
@@ -152,24 +160,25 @@ class LocationService extends \IdeoObject {
         $country = LookupResult::$ISO_TABLE[$countryIso];
         $address = preg_replace('/\s+/', ' ', "{$postalCode} {$city}, {$country}");
         return $this->addressLookup(trim($address), array(
-                    'postal_code' => $postalCode,
-                    'city' => $city,
-                    'country_iso' => $countryIso
+            'postal_code' => $postalCode,
+            'city' => $city,
+            'country_iso' => $countryIso
         ));
     }
 
     /**
-     * 
+     *
      * @param \models\services\LookupResult $lookupResult
      * @param type $preciseLong
      * @param type $preciseLat
      * @return \models\entities\GeocodeCached
      */
-    protected function cacheLookup(LookupResult $lookupResult, $preciseLong, $preciseLat, $extraData = array()) {
+    protected function cacheLookup(LookupResult $lookupResult, $preciseLong, $preciseLat, $extraData = array())
+    {
         $data = array(
-            'longitude' => $preciseLong,
-            'latitude' => $preciseLat,
-                ) + $lookupResult->getCachingData($extraData);
+                'longitude' => $preciseLong,
+                'latitude' => $preciseLat,
+            ) + $lookupResult->getCachingData($extraData);
 
         if ($data['longitude'] && $data['longitude']) {
             $saveId = $this->geocodeCachedManager->createEntity($data)->save(true);
@@ -179,11 +188,37 @@ class LocationService extends \IdeoObject {
         }
     }
 
-    public function computeDistance(\models\GeoLocation $source, \models\GeoLocation $destination, $shuffle=true) {
-        if($shuffle){
+    /**
+     * @param GeoLocation $source
+     * @param GeoLocation $destination
+     * @param bool|true $shuffle
+     * @return int
+     */
+    public function computeDistance(GeoLocation $source, GeoLocation $destination, $shuffle = true)
+    {
+        $dist = 0;
+        if ($this->isUsingPhysicalDistance()) {
+            $dist = $this->computePhysicalDistance($source, $destination, $shuffle);
+        }
+
+        if ($dist <= 0) {
+            $dist = self::haversineGreatCircleDistance($source, $destination);
+        }
+
+        return $dist;
+    }
+
+    public function isUsingPhysicalDistance()
+    {
+        return !!\SystemConfig::getInstance()->service['physical_distance'];
+    }
+
+    private function computePhysicalDistance(GeoLocation $source, GeoLocation $destination, $shuffle = true)
+    {
+        if ($shuffle) {
             shuffle($this->serviceProviderList);
         }
-        
+
         foreach ($this->serviceProviderList as $serviceProvier) {
             if (is_a($serviceProvier, '\models\services\LocationDistanceCheckI')) {
                 /* @var $serviceProvier LocationDistanceCheckI */
@@ -203,11 +238,28 @@ class LocationService extends \IdeoObject {
         return -1;
     }
 
+    public static function haversineGreatCircleDistance(GeoLocation $from, GeoLocation $to)
+    {
+        // convert from degrees to radians
+        $latFrom = deg2rad($from->getLatitude());
+        $lonFrom = deg2rad($from->getLongitude());
+        $latTo = deg2rad($to->getLatitude());
+        $lonTo = deg2rad($to->getLongitude());
+
+        $latDelta = $latTo - $latFrom;
+        $lonDelta = $lonTo - $lonFrom;
+
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
+                cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+        return $angle * self::EARTH_RADIUS;
+    }
+
     /**
-     * 
+     *
      * @return self
      */
-    public static function instance() {
+    public static function instance()
+    {
         if (!self::$instance) {
             self::$instance = new self();
         }

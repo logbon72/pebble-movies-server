@@ -7,6 +7,7 @@
  */
 
 namespace models\entities;
+use models\services\LocationService;
 
 /**
  * Description of Theatre
@@ -23,12 +24,12 @@ class Theatre extends StandardEntity
             ->where('name', $theatreData['name'])
             ->where('address', $theatreData['address']);
         if (($foundTheatre = $manager->getEntityWhere($findWhere))) {
-            TheatreNearby::getOrCreate($locationInfo, $foundTheatre);
+            TheatreNearby::getOrCreate($locationInfo, $foundTheatre, $computeDistance);
             return $foundTheatre;
         }
 
         if ($lookUpAddress && (!$theatreData['longitude'] || !$theatreData['latitude'])) {
-            $geoCode = \models\services\LocationService::instance()->addressLookup($theatreData['address']);
+            $geoCode = LocationService::instance()->addressLookup($theatreData['address']);
             if ($geoCode) {
                 $theatreData['longitude'] = $geoCode->found_longitude;
                 $theatreData['latitude'] = $geoCode->found_latitude;

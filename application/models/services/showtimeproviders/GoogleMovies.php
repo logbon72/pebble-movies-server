@@ -8,6 +8,7 @@
 
 namespace models\services\showtimeproviders;
 
+use models\entities\GeocodeCached;
 use models\services\ShowtimeService;
 use QueryPath\DOMQuery;
 
@@ -61,7 +62,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
         $this->priority = 10000;
     }
 
-    public function loadShowtimes(\models\entities\GeocodeCached $geocode, $date = null, $offset = 0)
+    public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0)
     {
 
         $this->currentDate = \Utilities::dateFromOffset($date, $offset);

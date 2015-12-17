@@ -232,7 +232,11 @@ This returns a PBI (Pebble Bitmat Image) representing QRCode for the URL to purc
 
 - `showtime_id`: the ID for the showtime, this showtime must have a URL attached to it, otherwise, an empty image will be returned.
 
+### GET /proxy/qr-png
 
-# License
+Similar to `/proxy/qr` except in this case, a PNG file is returned.
+
+
+# LICENSE
 
 MIT license

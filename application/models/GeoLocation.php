@@ -12,6 +12,9 @@ namespace models;
  * Description of Geocode
  *
  * @author intelWorX
+ * @method float getLatitude();
+ * @method float getLongitude();
+ *
  */
 class GeoLocation extends \IdeoObject {
 

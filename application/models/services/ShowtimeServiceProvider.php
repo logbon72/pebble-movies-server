@@ -7,6 +7,7 @@
  */
 
 namespace models\services;
+
 use models\entities\GeocodeCached;
 
 /**
@@ -28,18 +29,17 @@ abstract class ShowtimeServiceProvider extends ServiceProvider
     /**
      * @param GeocodeCached $geocode Previously stored geoLocation information
      * @param string $date date for showtimes to load, advisable to pass it in
+     * @param int $offset
      * @return array Theatre Movie Showtime: Organized in the format =>
      *  array(
-     *      ('theatre' => array(
-     *              [fieldsOfTheatreEntity]
-     *              'movies' =>  array(
-     *                  [fieldsOfMovieentity],
-     *                  'showtimes' => [fieldsOfShowtimeEntity][]
-     *              )[]
-     *      )[]),
-     *  );
-     *
-     *
+     * ('theatre' => array(
+     * [fieldsOfTheatreEntity]
+     * 'movies' =>  array(
+     * [fieldsOfMovieentity],
+     * 'showtimes' => [fieldsOfShowtimeEntity][]
+     * )[]
+     * )[]),
+     * );
      */
     abstract public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0);
 

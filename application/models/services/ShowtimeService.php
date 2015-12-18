@@ -188,12 +188,13 @@ class ShowtimeService extends \IdeoObject
     private function setShowtimesData(Theatre $theatre, Movie $movie, $showtimes)
     {
         if (empty($showtimes)) {
-            return 0;
+            return [];
         }
 
         foreach ($showtimes as $k => $showtime) {
             $showtimes[$k]['theatre_id'] = $theatre->id;
             $showtimes[$k]['movie_id'] = $movie->id;
+            ksort($showtimes[$k]);
         }
 
         return $showtimes;
@@ -494,18 +495,13 @@ class ShowtimeService extends \IdeoObject
         if ($showtime && $showtime->url) {
             try {
                 $shorten = $this->getBitly()->shorten($showtime->url, 'j.mp');
-                if ($shorten) {
-                    $l = $shorten['url'];
-                } else {
-                    $l = \SystemConfig::getInstance()->site['redirect_base'] . $showtimeId;
-                }
-
-                $filename = $this->cacheName($showtimeId, true);
-                QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
-                return $filename;
             } catch (\Exception $e) {
-                \SystemLogger::error(get_class($e), $e->getTraceAsString());
+                \SystemLogger::warn(get_class($e), $e->getTraceAsString());
             }
+            $l = $shorten ? $shorten['url'] : (\SystemConfig::getInstance()->site['redirect_base'] . $showtimeId);
+            $filename = $this->cacheName($showtimeId, true);
+            QRcode::png($l, $filename, QR_ECLEVEL_L, 4, 1);
+            return $filename;
         }
 
         return null;

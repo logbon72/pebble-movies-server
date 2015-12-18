@@ -7,6 +7,7 @@
  */
 
 namespace controllers;
+use main\models\ApiError;
 
 /**
  * Description of AppBaseController

@@ -212,11 +212,12 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
         $showtimesDomList = $movieDom->find(".times > span");
 
         $lastAp = "";
+        $replacePattern = ['/\&[A-Za-z]+;?/', "/[^a-z0-9:]/"];
 
         for ($i = $showtimesDomList->length - 1; $i >= 0; $i--) {
             $stDom = new DOMQuery($showtimesDomList->get($i));
             $showtime = array();
-            $timeSpan = preg_replace("/[^a-z0-9:]/", "", trim($stDom->find("span")->first()->text()));
+            $timeSpan = preg_replace($replacePattern, "", trim($stDom->find("span")->first()->text()));
             $matches = array();
             if (preg_match("/(am)|(pm)/i", $timeSpan, $matches)) {
                 $lastAp = $matches[0];

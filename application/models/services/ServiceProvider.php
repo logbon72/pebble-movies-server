@@ -54,6 +54,26 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
         }
     }
 
+    private function isGzipEncoded(array $headers){
+        foreach($headers as $header){
+            $matches = [];
+            if(preg_match('/^Content-Encoding:\s*.*(gzip|deflate)/', $header, $matches)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function getResponseContent($data, $headers){
+      if($this->isGzipEncoded($headers)){
+          \SystemLogger::debug('Data response is Gzip encoded');
+          \SystemLogger::debug('Raw length is: ', strlen($data));
+          return gzdecode($data);
+      } else {
+          return $data;
+      }
+    }
+
     protected function callUrl($url, $logResponse = null)
     {
         $startTime = microtime(true);
@@ -63,13 +83,18 @@ abstract class ServiceProvider extends \IdeoObject implements \ComparableInterfa
                 'ignore_errors' => true,
                 'timeout' => 30,
                 'method' => 'GET',
+                'header'=> [
+                    'Accept-Encoding: gzip, deflate'
+                ],
             ),
         );
 
         $streamContext = stream_context_create($contextOpt);
         \SystemLogger::debug(get_class($this), ":", __METHOD__, "URL: ", $url);
-        $result = file_get_contents($url, false, $streamContext);
-        \SystemLogger::debug("response length: ", strlen($result));
+        $raw = file_get_contents($url, false, $streamContext);
+        $result = $this->getResponseContent($raw, $http_response_header);
+        \SystemLogger::debug("Response length: ", strlen($result));
+
 
         if ($logResponse === null) {
             $logResponse = $this->isLoggingRequests();

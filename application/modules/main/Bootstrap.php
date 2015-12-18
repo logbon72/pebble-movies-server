@@ -13,7 +13,8 @@ namespace main;
  *
  * @author intelWorX
  */
-class Bootstrap extends \ApplicationBootstrap {
+class Bootstrap extends \ApplicationBootstrap
+{
     //put your code here
-    
+
 }

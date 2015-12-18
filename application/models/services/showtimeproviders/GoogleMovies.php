@@ -62,15 +62,15 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
         $this->priority = 10000;
     }
 
-    public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0)
+    public function loadShowtimes(GeocodeCached $geocode, $currentDate = null, $dateOffset = 0)
     {
 
-        $this->currentDate = \Utilities::dateFromOffset($date, $offset);
+        $this->currentDate = \Utilities::dateFromOffset($currentDate, $dateOffset);
         $allCinemasFound = array();
         for ($i = 0; $i < self::MAX_PAGES; $i++) {
             $data = array(
                 'latlng' => $geocode->getGeocode(),
-                'date' => $offset,
+                'date' => $dateOffset,
                 'start' => $i * self::PER_PAGE,
                 //'page' => $i+1,
             );

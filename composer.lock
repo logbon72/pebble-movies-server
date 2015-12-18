@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "a9b90654efb280b4bb04e73eb1490b30",
-    "content-hash": "c6311d4621f2d8a750d1227e47c86cb2",
+    "hash": "5cdd54c6a54a1dd83d97859e8bf0a5ea",
+    "content-hash": "899e7cb957d7f5826136f8dcd1351703",
     "packages": [
         {
             "name": "aferrandini/phpqrcode",
@@ -102,6 +102,36 @@
                 "smarty"
             ],
             "time": "2015-12-14 19:43:13"
+        },
+        {
+            "name": "intelworx/tripican-api-client-php",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://bitbucket.org/logbon72/apiv1-client.git",
+                "reference": "4c14f6ec3156b6dabb8bfbf20dee4685e1e24853"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://bitbucket.org/logbon72/apiv1-client/get/4c14f6ec3156b6dabb8bfbf20dee4685e1e24853.zip",
+                "reference": "4c14f6ec3156b6dabb8bfbf20dee4685e1e24853",
+                "shasum": ""
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "intelworx\\tripican\\apiclient\\": "."
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "authors": [
+                {
+                    "name": "Joseph Orilogbon",
+                    "email": "joseph@orilogbon.me"
+                }
+            ],
+            "description": "The API client for Tripican.com's API",
+            "time": "2015-12-15 17:12:54"
         },
         {
             "name": "masterminds/html5",
@@ -386,7 +416,8 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "intelworx/ideo-framework": 20
+        "intelworx/ideo-framework": 20,
+        "intelworx/tripican-api-client-php": 20
     },
     "prefer-stable": false,
     "prefer-lowest": false,

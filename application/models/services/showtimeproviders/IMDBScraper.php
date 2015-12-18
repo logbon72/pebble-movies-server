@@ -68,14 +68,14 @@ class IMDBScraper extends ShowtimeServiceProvider
     }
 
 
-    public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0)
+    public function loadShowtimes(GeocodeCached $geocode, $currentDate = null, $dateOffset = 0)
     {
         \SystemLogger::debug('SCRAPING started');
-        $data = array(
+        $data = [
             'countryIso' => $geocode->country_iso,
-            'date' => \Utilities::dateFromOffset($date ?: date('Y-m-d'), $offset),
+            'date' => \Utilities::dateFromOffset($currentDate ?: date('Y-m-d'), $dateOffset),
             'postalCode' => urlencode($geocode->postal_code),
-        );
+        ];
 
 
         $pageData = $this->callUrl($this->formatUrl($this->urlTemplate, $data, true));

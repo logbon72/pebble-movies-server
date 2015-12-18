@@ -28,20 +28,34 @@ abstract class ShowtimeServiceProvider extends ServiceProvider
 
     /**
      * @param GeocodeCached $geocode Previously stored geoLocation information
-     * @param string $date date for showtimes to load, advisable to pass it in
-     * @param int $offset
-     * @return array Theatre Movie Showtime: Organized in the format =>
-     *  array(
-     * ('theatre' => array(
-     * [fieldsOfTheatreEntity]
-     * 'movies' =>  array(
-     * [fieldsOfMovieentity],
-     * 'showtimes' => [fieldsOfShowtimeEntity][]
-     * )[]
-     * )[]),
-     * );
+     * @param string $currentDate date for showtimes to load, advisable to pass it in
+     * @param int $dateOffset number of days from the current dates
+     * @return TheatreData[] an array of schema TheatreData, see below for description
+     *
+     * Organized in the format =>
+     *
+     * ```
+     *
+     *  TheatreData : [
+     *      'theatre' => [
+     *              ...fields from theatre table, MUST contain name and address...,
+     *      ]
+     *      'movies' => MovieData[]
+     *  ]
+     *
+     * MovieData : [
+     *     'movie' => [
+     *          ...fields from movie table, MUST contain title...,
+     *     ]
+     *     'showtimes' => ShowtimeData[]
+     * ]
+     *
+     * ShowtimeData: [
+     *      ...fields from showtime table, must conatin show_date, show_time & type...
+     * ]
+     * ```
      */
-    abstract public function loadShowtimes(GeocodeCached $geocode, $date = null, $offset = 0);
+    abstract public function loadShowtimes(GeocodeCached $geocode, $currentDate = null, $dateOffset = 0);
 
     public function supports(GeocodeCached $locationInfo)
     {

@@ -29,7 +29,7 @@
         <main class="mdl-layout__content">
             <div class="page-content">
 
-                {if true || $hasUpdate}
+                {if $hasUpdate}
                     <div style="text-align: center; color: #fff; padding: 10px" class="mdl-color--blue-500">
                         A newer version of this app is available. Visit Pebble App store to update
                     </div>
@@ -81,6 +81,25 @@
                         </div>
                     </div>
 
+                    {if $showReminder}
+                        <div class="mdl-grid">
+                            {if $smarty.get.Reminder}
+                                {$reminder=$smarty.get.Reminder}
+                            {else}
+                                {$reminder=30}
+                            {/if}
+                            {$reminders=[0 => "None", 15 => "15 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 120 => "2 hours", 180 => "3 hours", 360 => "6 hours", 720 => "12 hours", 1440 => "A day before"]}
+                            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell mdl-cell--12-col">
+                                <input class="mdl-textfield__input" type="text" name="Reminder" max="2880" min="15"
+                                       id="Reminder" data-options='{$reminders|@json_encode}' value="{$reminder}">
+
+                                <label class="mdl-textfield__label">Reminder</label>
+                            </div>
+                            <div class="mdl-cell mdl-cell--12-col" style="margin-top: -20px">
+                                <small>The time before event for timeline reminders.</small>
+                            </div>
+                        </div>
+                    {/if}
 
                     {$units = ["km" => "Km", "mi"=>"Miles"]}
                     <div class="mdl-grid">
@@ -118,12 +137,12 @@
 
                     <div class="mdl-grid">
                         <button id="b-submit"
-                                class="mdl-cell mdl-cell--6-col-desktop mdl-cell--2-col--tablet mdl-cell--2-col--phone mdl-button mdl-js-button mdl-js-ripple-effect">
+                                class="mdl-cell mdl-cell--6-col-desktop mdl-cell--4-col--tablet mdl-cell--2-col--phone mdl-button mdl-js-button mdl-js-ripple-effect">
                             Save
                         </button>
 
                         <button id="b-cancel"
-                                class="mdl-cell mdl-cell--6-col-desktop mdl-cell--2-col--tablet mdl-cell--2-col--phone mdl-button mdl-js-button mdl-js-ripple-effect">
+                                class="mdl-cell mdl-cell--6-col-desktop mdl-cell--4-col--tablet mdl-cell--2-col--phone mdl-button mdl-js-button mdl-js-ripple-effect">
                             Cancel
                         </button>
                     </div>

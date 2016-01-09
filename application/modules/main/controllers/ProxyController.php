@@ -38,6 +38,7 @@ class ProxyController extends AppBaseController
     const DATE_BUG_VERSION = 20140401;
     const UPGRADE_COMPACT_VERSION = 20140528;
     const UPGRADE_FORCE_LOC = 20140528;
+    const UPGRADE_TIMELINE = 20160109;
 
     /**
      *
@@ -261,6 +262,7 @@ class ProxyController extends AppBaseController
         $this->_view->geocode = $this->geocode;
         $this->_view->hasUpdate = $this->currentVersion > $this->userVersion;
         $this->_view->showForceLocation = $this->userVersion >= self::UPGRADE_FORCE_LOC;
+        $this->_view->showReminder = $this->userVersion >= self::UPGRADE_TIMELINE;
         parent::display();
         exit;
     }

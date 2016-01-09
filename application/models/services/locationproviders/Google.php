@@ -9,41 +9,40 @@
 namespace models\services\locationproviders;
 
 use models\services\AddressLookupI;
+use models\services\GoogleMapServiceI;
+use models\services\GoogleMapServiceT;
 use models\services\LocationServiceProvider;
 use models\services\LookupResult;
-use models\services\ServiceError;
-use SystemConfig;
 
 /**
  * Description of Google
  *
  * @author intelWorX
  */
-class Google extends LocationServiceProvider implements AddressLookupI {
+class Google extends LocationServiceProvider implements AddressLookupI, GoogleMapServiceI
+{
 
-    protected $apiKey;
+    use GoogleMapServiceT;
+
 
     const URL_ADDRESS_LOOKUP = "https://maps.googleapis.com/maps/api/geocode/json?address={address}&sensor=true&key={apiKey}";
     const URL_LATLNG_LOOKUP = "https://maps.googleapis.com/maps/api/geocode/json?latlng={latlng}&sensor=true&key={apiKey}";
-    const STATUS_OK = "OK";
-    const STATUS_ZERO_RESULTS = "ZERO_RESULTS";
-    const STATUS_OVER_QUERY_LIMIT = "OVER_QUERY_LIMIT";
-    const STATUS_REQUEST_DENIED = "REQUEST_DENIED";
-    const STATUS_INVALID_REQUEST = "INVALID_REQUEST";
-    const STATUS_UNKNOWN_ERROR = "UNKNOWN_ERROR";
 
-    public function __construct() {
+
+    public function __construct()
+    {
         $this->priority = 1000;
-        $this->apiKey = SystemConfig::getInstance()->google['api_key'];
+        $this->setApiKey();
     }
 
     /**
      *
-     * @param type $address
+     * @param string $address
      *
      * @return LookupResult result
      */
-    public function addressLookup($address) {
+    public function addressLookup($address)
+    {
         $data = array(
             'address' => $address,
             'apiKey' => $this->apiKey,
@@ -58,7 +57,8 @@ class Google extends LocationServiceProvider implements AddressLookupI {
         return null;
     }
 
-    protected function convertToLookUpResult($result) {
+    protected function convertToLookUpResult($result)
+    {
         if (!$result) {
             return null;
         }
@@ -87,20 +87,8 @@ class Google extends LocationServiceProvider implements AddressLookupI {
         return new LookupResult($lData['postalCode'], $lData['countryIso'], $latLngArr['lng'], $latLngArr['lat'], $lData['city'], $lData['country']);
     }
 
-    protected function hasError($apiResult) {
-        $status = $apiResult['status'];
-        if ($status !== self::STATUS_OK) {
-            if ($status === self::STATUS_ZERO_RESULTS) {
-                return $this->lastError = new ServiceError(ServiceError::ERR_NOT_FOUND, self::STATUS_ZERO_RESULTS);
-            } else {
-                return $this->lastError = new ServiceError(ServiceError::ERR_RATE_LIMIT, $status);
-            }
-        }
-
-        return null;
-    }
-
-    public function lookUp($long, $lat) {
+    public function lookUp($long, $lat)
+    {
         $data = array(
             'latlng' => "{$lat},{$long}",
             'apiKey' => $this->apiKey,

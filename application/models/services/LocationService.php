@@ -38,15 +38,12 @@ class LocationService extends \IdeoObject
     private function __construct()
     {
         $serviceProvidersDir = __DIR__ . DS . 'locationproviders';
-        $directoryIterator = new \DirectoryIterator($serviceProvidersDir);
-        while ($directoryIterator->valid()) {
-            if ($directoryIterator->isFile() && $directoryIterator->isReadable()) {
-                $className = __NAMESPACE__ . '\\locationproviders\\' . explode('.', $directoryIterator->getBasename())[0];
-                if (class_exists($className)) {
-                    $this->serviceProviderList[] = new $className();
-                }
-            }
-            $directoryIterator->next();
+        $ns = __NAMESPACE__ . '\\locationproviders';
+
+        $scanner = new \PackageScanner($serviceProvidersDir, $ns, LocationServiceProvider::getClass());
+
+        foreach($scanner->getAllInstantiable() as $provider){
+            $this->serviceProviderList[] = $provider->newInstance();
         }
 
         if (!count($this->serviceProviderList)) {

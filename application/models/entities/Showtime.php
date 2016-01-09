@@ -12,6 +12,11 @@ namespace models\entities;
  * Description of Showtime
  *
  * @author intelWorX
+ *
+ * @property Movie $movie;
+ * @property Theatre $theatre;
+ *
+ *
  */
 class Showtime extends StandardEntity
 {

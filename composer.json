@@ -11,6 +11,7 @@
     "querypath/querypath": "~3.0.0",
     "aferrandini/phpqrcode": ">=1.0.1",
     "intelworx/ideo-framework": "dev-master",
-    "intelworx/tripican-api-client-php": "dev-master"
+    "intelworx/tripican-api-client-php": "dev-master",
+    "valorin/pinpusher": "v1.3.0"
   }
 }

@@ -17,6 +17,7 @@ use models\entities\GeocodeCached;
 use models\entities\UserDevice;
 use models\entitymanagers\UserDeviceManager;
 use models\services\LocationService;
+use models\services\PinServce;
 use models\services\ShowtimeService;
 
 /**
@@ -47,7 +48,7 @@ class ProxyController extends AppBaseController
     protected $geocode;
     protected $currentDate;
     protected $dateOffset = 0;
-    protected $result = array();
+    protected $result = [];
 
     const ALLOWED_LAG = 4000;//300;
 
@@ -285,6 +286,24 @@ class ProxyController extends AppBaseController
         $this->result['movie_theatres'] = $movieId && $this->geocode ? $this->showtimeService->getTheatres($this->geocode, $this->currentDate, $movieId, true) : array();
     }
 
+    public function doPinPush()
+    {
+        $this->_enforcePOST();
+        $showtimeId = (int)$this->_request->getPostData('showtimeId');
+        $userToken = $this->_request->getPostData('timelineToken');
+        $reminderMinutes = intval($this->_request->getPostData('reminder', true, PinServce::DEFAULT_REMINDER_MINUTES));
+        if (!$showtimeId || !$userToken) {
+            $this->response->badRequest();
+            $this->response->addError(new ApiError('MISSING_PARAMS', ''));
+        } else {
+            $pinService = new PinServce($showtimeId, $reminderMinutes, $userToken, $this->geocode);
+            if (!$this->_request->getQueryParam('generateOnly')) {
+                $pinService->pushPin();
+            }
+            $this->result = $pinService->getShowtimePin()->generate();
+        }
+    }
+
     public function display()
     {
         $this->response->setResult($this->result);
@@ -301,16 +320,6 @@ class ProxyController extends AppBaseController
         return $this->currentDate;
     }
 
-    public function doClean()
-    {
-        if ($this->_request->getQueryParam('skip') == 200) {
-            $deleted = ShowtimeService::cleanShowdates();
-            echo "Showtimes deleted: ", $deleted, "\n";
-            $cleaned = ShowtimeService::cleanPbis();
-            echo "PBI deleted: ", $cleaned, "\n";
-        }
-        exit;
-    }
 
     protected function _initMode()
     {

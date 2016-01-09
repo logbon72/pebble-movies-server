@@ -11,7 +11,6 @@ namespace models\services;
 require_once LIB_DIR . 'bitlyapi/Bitly.php';
 
 use Bitly;
-use DirectoryIterator;
 use InvalidArgumentException;
 use main\models\ProxyMode;
 use models\entities\GeocodeCached;
@@ -81,15 +80,11 @@ class ShowtimeService extends \IdeoObject
     {
         //load providers
         $serviceProvidersDir = __DIR__ . DS . 'showtimeproviders';
-        $directoryIterator = new DirectoryIterator($serviceProvidersDir);
-        while ($directoryIterator->valid()) {
-            if ($directoryIterator->isFile() && $directoryIterator->isReadable()) {
-                $className = __NAMESPACE__ . '\\showtimeproviders\\' . explode('.', $directoryIterator->getBasename())[0];
-                if (class_exists($className)) {
-                    $this->serviceProviderList[] = new $className();
-                }
-            }
-            $directoryIterator->next();
+        $namespace = __NAMESPACE__ . '\\' . 'showtimeproviders';
+        $scanner = new \PackageScanner($serviceProvidersDir, $namespace, ShowtimeServiceProvider::getClass());
+
+        foreach ($scanner->getAllInstantiable() as $provider) {
+            $this->serviceProviderList[] = $provider->newInstance();
         }
 
         if (!count($this->serviceProviderList)) {

@@ -12,6 +12,8 @@ use models\GeoLocation;
 use models\services\AddressLookupI;
 use models\services\LocationDistanceCheckI;
 use models\services\LocationServiceProvider;
+use models\services\LookupResult;
+use models\services\ServiceError;
 use SystemConfig;
 
 /**
@@ -84,27 +86,27 @@ class Bing extends LocationServiceProvider implements AddressLookupI, LocationDi
 
     /**
      * 
-     * @param type $resultDecoded
-     * @return \models\services\LookupResult
+     * @param array $resultDecoded
+     * @return LookupResult
      */
     private function convertToLookupResult($resultDecoded) {
         $resultProp = $resultDecoded['resourceSets'][0]['resources'][0];
         $address = $resultProp['address'];
         $geocode = $resultProp['geocodePoints'][0]['coordinates'];
-        $countryIso = array_search($address['countryRegion'], \models\services\LookupResult::$ISO_TABLE);
+        $countryIso = array_search($address['countryRegion'], LookupResult::$ISO_TABLE);
         if($countryIso){
-            $countryIso = \models\services\LookupResult::remapIso($countryIso);
+            $countryIso = LookupResult::remapIso($countryIso);
         }
-        return new \models\services\LookupResult($address['postalCode'], $countryIso, $geocode[1], $geocode[0], $resultProp['adminDistrict'], $address['countryRegion']);
+        return new LookupResult($address['postalCode'], $countryIso, $geocode[1], $geocode[0], $resultProp['adminDistrict'], $address['countryRegion']);
     }
 
     private function checkError($result, $key = 'resourceSets') {
         if ($result['statusCode'] !== self::STATUS_SUCCESS) {
-            return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_RATE_LIMIT, $result['statusCode'] . ': ' . $result['statusDescription']);
+            return $this->lastError = new ServiceError(ServiceError::ERR_RATE_LIMIT, $result['statusCode'] . ': ' . $result['statusDescription']);
         }
 
         if (empty($result[$key]) || $result[$key][0]['estimatedTotal'] < 1) {
-            return $this->lastError = new \models\services\ServiceError(\models\services\ServiceError::ERR_NOT_FOUND, "No results found.");
+            return $this->lastError = new ServiceError(ServiceError::ERR_NOT_FOUND, "No results found.");
         }
 
         return null;

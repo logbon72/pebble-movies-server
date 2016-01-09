@@ -90,7 +90,7 @@
                             {/if}
                             {$reminders=[0 => "None", 15 => "15 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 120 => "2 hours", 180 => "3 hours", 360 => "6 hours", 720 => "12 hours", 1440 => "A day before"]}
                             <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label mdl-cell mdl-cell--12-col">
-                                <input class="mdl-textfield__input" type="text" name="Reminder" max="2880" min="15"
+                                <input class="mdl-textfield__input" data-fixed-height="100px" type="text" name="Reminder" max="2880" min="15"
                                        id="Reminder" data-options='{$reminders|@json_encode}' value="{$reminder}">
 
                                 <label class="mdl-textfield__label">Reminder</label>

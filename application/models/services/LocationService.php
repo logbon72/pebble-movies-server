@@ -42,7 +42,7 @@ class LocationService extends \IdeoObject
 
         $scanner = new \PackageScanner($serviceProvidersDir, $ns, LocationServiceProvider::getClass());
 
-        foreach($scanner->getAllInstantiable() as $provider){
+        foreach ($scanner->getAllInstantiable() as $provider) {
             $this->serviceProviderList[] = $provider->newInstance();
         }
 
@@ -83,7 +83,7 @@ class LocationService extends \IdeoObject
         foreach ($this->serviceProviderList as $serviceProvier) {
             $lookUpResult = $serviceProvier->lookUp($preciseLong, $preciseLat);
             \SystemLogger::debug("Making call with: ", $serviceProvier->getClassBasic());
-            if ($lookUpResult) {
+            if ($lookUpResult && ($lookUpResult->getCity() || $lookUpResult->getPostalCode())) {
                 //var_dump($lookUpResult);exit;
                 return $this->cacheLookup($lookUpResult, $preciseLong, $preciseLat);
             } else {

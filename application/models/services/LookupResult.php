@@ -12,6 +12,10 @@ namespace models\services;
  * Description of LookupResult
  *
  * @author intelWorX
+ *
+ * @method string getPostalCode();
+ * @method string getCity();
+ *
  */
 class LookupResult extends \IdeoObject {
 

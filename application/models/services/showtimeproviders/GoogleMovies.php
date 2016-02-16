@@ -58,6 +58,7 @@ class GoogleMovies extends \models\services\ShowtimeServiceProvider
             "NL",
             "MY",
             "SG",
+            "SE"
         );
         $this->priority = 10000;
     }
